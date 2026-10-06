@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}GeoSDI Geothermal{% endblock %}</title>
+
+    <!-- Third-party CSS — load DULU -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+
+    <!-- Custom CSS — load TERAKHIR (biar menang specificity) -->
+    <link rel="stylesheet" href="/static/css/style.css?v=2.0.5">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="nav-logo">
+                <i class="fas fa-fire"></i>
+                <span>GeoSDI</span>
+                <small>Geothermal</small>
+            </a>
+
+            <ul class="nav-menu">
+                <li><a href="/"><i class="fas fa-home"></i> Home</a></li>
+                <li><a href="/user/dashboard"><i class="fas fa-user"></i> My Dashboard</a></li>
+                <li><a href="/dashboard"><i class="fas fa-map"></i> Dashboard</a></li>
+                <li><a href="/analytics"><i class="fas fa-chart-line"></i> Analytics</a></li>
+                <li><a href="/insights"><i class="fas fa-lightbulb"></i> Insights</a></li>
+                <li><a href="/digital-twin"><i class="fas fa-globe"></i> Digital Twin</a></li>
+                <li><a href="/api/docs" target="_blank"><i class="fas fa-code"></i> API</a></li>
+                <li><a href="/about"><i class="fas fa-info-circle"></i> About</a></li>
+            </ul>
+
+            <!-- 👤 USER CHIP & LOGOUT DROPDOWN -->
+            {% if request.session and request.session.get('user') %}
+            {% set u = request.session.user %}
+            <div class="nav-user" id="navUser">
+                <button class="nav-user-chip" onclick="toggleUserDropdown(event)" type="button">
+                    <span class="nav-user-avatar">{{ u.username[0]|upper }}</span>
+                    <span class="nav-user-name">{{ u.full_name or u.username }}</span>
+                    {% if u.role == 'admin' %}
+                    <span class="nav-user-role role-admin">ADMIN</span>
+                    {% elif u.role == 'analyst' %}
+                    <span class="nav-user-role role-analyst">ANALYST</span>
+                    {% else %}
+                    <span class="nav-user-role role-viewer">VIEWER</span>
+                    {% endif %}
+                    <i class="fas fa-chevron-down" style="font-size: 0.65rem; opacity: 0.6;"></i>
+                </button>
+
+                <div class="nav-user-dropdown" id="navUserDropdown">
+                    <div class="dropdown-header">
+                        <div class="dropdown-avatar">{{ u.username[0]|upper }}</div>
+                        <div>
+                            <div class="dropdown-name">{{ u.full_name or u.username }}</div>
+                            <div class="dropdown-email">{{ u.email }}</div>
+                        </div>
+                    </div>
+                    <div class="dropdown-divider"></div>
+                    <a href="/profile" class="dropdown-item">
+                        <i class="fas fa-user-circle"></i>
+                        <span>Profile Saya</span>
+                    </a>
+                    {% if u.role == 'admin' %}
+                    <a href="/admin/users" class="dropdown-item">
+                        <i class="fas fa-users-cog"></i>
+                        <span>User Management</span>
+                    </a>
+                    <a href="/admin/wkp" class="dropdown-item">
+                        <i class="fas fa-cog"></i>
+                        <span>Admin Panel</span>
+                    </a>
+                    {% endif %}
+                    <div class="dropdown-divider"></div>
+                    <a href="/logout" class="dropdown-item dropdown-item-danger">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Logout</span>
+                    </a>
+                </div>
+            </div>
+            {% else %}
+            <!-- Belum login: tampilkan tombol Login -->
+            <a href="/login" class="nav-login-btn">
+                <i class="fas fa-sign-in-alt"></i>
+                <span>Login</span>
+            </a>
+            {% endif %}
+        </div>
+    </nav>
+
+    <!-- USER CHIP STYLES (scoped, tidak bentrok dengan halaman lain) -->
+    <style>
+        .nav-user {
+            position: relative;
+        }
+        .nav-user-chip {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.35rem 0.7rem 0.35rem 0.35rem;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 24px;
+            cursor: pointer;
+            color: white;
+            font-family: inherit;
+            font-size: 0.82rem;
+            font-weight: 500;
+            transition: all 0.15s;
+        }
+        .nav-user-chip:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+        .nav-user-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.8rem;
+            flex-shrink: 0;
+        }
+        .nav-user-name {
+            max-width: 100px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .nav-user-role {
+            font-size: 0.6rem;
+            padding: 0.15rem 0.4rem;
+            border-radius: 8px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+        }
+        .role-admin { background: #fee2e2; color: #991b1b; }
+        .role-analyst { background: #fef3c7; color: #92400e; }
+        .role-viewer { background: #e5e7eb; color: #374151; }
+
+        .nav-user-dropdown {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            border: 1px solid #e2e8f0;
+            min-width: 240px;
+            padding: 0.35rem;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-6px);
+            transition: all 0.15s ease;
+            z-index: 2000;
+        }
+        .nav-user-dropdown.open {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        .dropdown-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: #f8fafc;
+            border-radius: 8px;
+            margin-bottom: 0.35rem;
+        }
+        .dropdown-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #3b82f6, #1e40af);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+        .dropdown-name {
+            font-weight: 600;
+            color: #0f172a;
+            font-size: 0.9rem;
+            margin-bottom: 0.15rem;
+        }
+        .dropdown-email {
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+        .dropdown-divider {
+            height: 1px;
+            background: #e2e8f0;
+            margin: 0.35rem 0;
+        }
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.55rem 0.75rem;
+            border-radius: 6px;
+            text-decoration: none;
+            color: #334155;
+            font-size: 0.88rem;
+            transition: all 0.12s;
+        }
+        .dropdown-item:hover {
+            background: #f1f5f9;
+            color: #1e40af;
+        }
+        .dropdown-item i {
+            width: 16px;
+            text-align: center;
+            color: #64748b;
+        }
+        .dropdown-item-danger { color: #dc2626; }
+        .dropdown-item-danger:hover {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+        .dropdown-item-danger i { color: #dc2626; }
+        .nav-login-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 8px;
+            color: white;
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.15s;
+        }
+        .nav-login-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+    </style>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="footer-container">
+            <p>
+                <strong>GeoSDI Geothermal v2.0</strong> —
+                From Observation to Understanding, From Understanding to Prediction,
+                From Prediction to Better Decisions.
+            </p>
+            <p class="footer-meta">
+                © 2026 Emen & DeepSeek | Powered by FastAPI + PostGIS
+            </p>
+        </div>
+    </footer>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Main JS -->
+    <script src="/static/js/main.js?v=2.0.3"></script>
+
+    <!-- Leaflet Marker Cluster JS -->
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+    <!-- User Dropdown Script -->
+    <script>
+        function toggleUserDropdown(e) {
+            e.stopPropagation();
+            const dd = document.getElementById('navUserDropdown');
+            if (dd) dd.classList.toggle('open');
+        }
+        document.addEventListener('click', function() {
+            const dd = document.getElementById('navUserDropdown');
+            if (dd) dd.classList.remove('open');
+        });
+        // ESC untuk close
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                const dd = document.getElementById('navUserDropdown');
+                if (dd) dd.classList.remove('open');
+            }
+        });
+    </script>
+
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

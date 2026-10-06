@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Insights — GeoSDI Geothermal{% endblock %}
+
+{% block content %}
+<h1 style="margin-bottom: 1.5rem;">💡 Insights & Health Report</h1>
+
+<!-- Headline -->
+<section id="headline" style="
+    background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+">
+    <p style="font-size: 1.15rem; line-height: 1.8; margin: 0;">
+        ⏳ Loading summary...
+    </p>
+</section>
+
+<!-- Stats Grid -->
+<section id="statsGrid" class="stats-grid">
+    <!-- Filled by JS -->
+</section>
+
+<!-- Alerts -->
+<section style="
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+">
+    <h2 style="color: #1e3a8a; margin-bottom: 1rem;">
+        🚨 Alerts Aktif
+    </h2>
+    <div id="alertsContainer">
+        <p style="color: #64748b;">⏳ Loading alerts...</p>
+    </div>
+</section>
+
+<!-- Health Report -->
+<section style="
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+">
+    <h2 style="color: #1e3a8a; margin-bottom: 1rem;">
+        📊 Health Report per WKP
+    </h2>
+    <div id="healthContainer">
+        <p style="color: #64748b;">⏳ Loading health report...</p>
+    </div>
+</section>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/insights.js?v=2.0.5"></script>
+{% endblock %}

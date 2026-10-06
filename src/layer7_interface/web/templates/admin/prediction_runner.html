@@ -1,0 +1,443 @@
+{% extends "admin/base_admin.html" %}
+
+{% block admin_title %}Prediction Runner — GeoSDI Admin{% endblock %}
+
+{% block admin_content %}
+<h1 style="margin-top: 0;">🔮 Prediction Runner</h1>
+<p style="color: #64748b;">
+    Jalankan prediksi GDI untuk WKP berdasarkan data historis yang sudah diinput.
+</p>
+
+<div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem;">
+    <!-- Left: Control Panel -->
+    <div style="
+        background: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        height: fit-content;
+    ">
+        <h2 style="margin-top: 0; color: #1e3a8a; font-size: 1rem;">
+            ⚙️ Konfigurasi
+        </h2>
+
+        <div style="margin-bottom: 0.75rem;">
+            <label style="display: block; font-weight: bold; margin-bottom: 0.25rem; font-size: 0.85rem;">
+                Pilih WKP
+            </label>
+            <select id="wkpSelect" style="width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px;">
+                <option value="">⏳ Loading...</option>
+            </select>
+        </div>
+
+        <div style="margin-bottom: 0.75rem;">
+            <label style="display: block; font-weight: bold; margin-bottom: 0.25rem; font-size: 0.85rem;">
+                Horizon (bulan ke depan)
+            </label>
+            <select id="horizonSelect" style="width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px;">
+                <option value="12">12 bulan (1 tahun)</option>
+                <option value="24">24 bulan (2 tahun)</option>
+                <option value="36">36 bulan (3 tahun)</option>
+            </select>
+        </div>
+        
+        <div style="margin-bottom: 0.75rem;">
+            <label style="display: block; font-weight: bold; margin-bottom: 0.25rem; font-size: 0.85rem;">
+                Metode Prediksi
+            </label>
+            <select id="methodSelect" style="width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px;">
+                <option value="auto">🤖 Auto (Rekomendasi Sistem)</option>
+                <option value="holt">📈 Holt's Linear (Cepat)</option>
+                <option value="arima">📊 ARIMA (Statistik Klasik)</option>
+                <option value="prophet">🔮 Prophet (Facebook, Akurat)</option>
+            </select>
+            <div id="methodInfo" style="
+                margin-top: 0.25rem;
+                font-size: 0.75rem;
+                color: #64748b;
+                font-style: italic;
+            "></div>
+        </div>
+
+        <div id="dataStatus" style="
+            margin-bottom: 1rem;
+            padding: 0.75rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            background: #f8fafc;
+            color: #64748b;
+        ">
+            ℹ️ Pilih WKP untuk cek data historis
+        </div>
+
+        <button id="runBtn" style="
+            width: 100%;
+            background: #8b5cf6;
+            color: white;
+            border: none;
+            padding: 0.75rem;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 0.95rem;
+        ">🔮 Jalankan Prediction</button>
+
+        <div id="resultSummary" style="
+            margin-top: 1rem;
+            display: none;
+        "></div>
+    </div>
+
+    <!-- Right: Chart + Table -->
+    <div>
+        <!-- Chart -->
+        <div style="
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 1rem;
+        ">
+            <h2 style="margin-top: 0; color: #1e3a8a; font-size: 1rem;">
+                📊 Prediction Chart
+            </h2>
+            <div style="position: relative; height: 350px;">
+                <canvas id="predChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Forecast Table -->
+        <div style="
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        ">
+            <h2 style="margin-top: 0; color: #1e3a8a; font-size: 1rem;">
+                📋 Detail Prediksi
+            </h2>
+            <div id="forecastTable">
+                <p style="color: #94a3b8; text-align: center;">Jalankan prediction untuk lihat hasil</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+let predChart = null;
+
+async function loadWKP() {
+    try {
+        const resp = await fetch('/api/nodes?page_size=500&data_quality=verified');
+        const data = await resp.json();
+
+        const select = document.getElementById('wkpSelect');
+        select.innerHTML = '<option value="">— Pilih WKP —</option>' +
+            data.data.map(w => `<option value="${w.kode}">${w.kode} — ${w.nama}</option>`).join('');
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+async function checkHistoricalData() {
+    const kode = document.getElementById('wkpSelect').value;
+    const statusDiv = document.getElementById('dataStatus');
+
+    if (!kode) {
+        statusDiv.innerHTML = 'ℹ️ Pilih WKP untuk cek data historis';
+        statusDiv.style.background = '#f8fafc';
+        statusDiv.style.color = '#64748b';
+        return;
+    }
+
+    try {
+        const resp = await fetch(`/api/admin/time-series/${kode}`);
+        const data = await resp.json();
+
+        if (data.count < 3) {
+            statusDiv.innerHTML = `⚠️ <strong>Data historis tidak cukup</strong><br>WKP ini hanya punya ${data.count} data point. Minimal 3 untuk prediction.<br><a href="/admin/time-series/input" style="color: #1e3a8a;">📈 Input data dulu</a>`;
+            statusDiv.style.background = '#fef3c7';
+            statusDiv.style.color = '#92400e';
+        } else {
+            statusDiv.innerHTML = `✅ <strong>Data siap</strong><br>${data.count} data point historis tersedia`;
+            statusDiv.style.background = '#ecfdf5';
+            statusDiv.style.color = '#065f46';
+        }
+    } catch (e) {
+        statusDiv.innerHTML = `❌ Error: ${e.message}`;
+    }
+}
+
+async function runPrediction() {
+    const kode = document.getElementById('wkpSelect').value;
+    const horizon = parseInt(document.getElementById('horizonSelect').value);
+    const method = document.getElementById('methodSelect').value;
+    const btn = document.getElementById('runBtn');
+
+    if (!kode) {
+        alert('Pilih WKP dulu!');
+        return;
+    }
+
+    btn.textContent = `⏳ Running ${method}...`;
+    btn.disabled = true;
+
+    try {
+        const resp = await fetch('/api/admin/prediction/select', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                kode: kode,
+                method: method,
+                horizon_months: horizon,
+            }),
+        });
+
+        if (!resp.ok) {
+            const err = await resp.json();
+            throw new Error(err.detail || `HTTP ${resp.status}`);
+        }
+
+        const data = await resp.json();
+
+        const histResp = await fetch(`/api/admin/time-series/${kode}`);
+        const histData = await histResp.json();
+
+        renderPredictionChart(data, histData.data);
+        renderSummary(data);
+        renderForecastTable(data);
+    } catch (e) {
+        alert('Gagal: ' + e.message);
+    } finally {
+        btn.textContent = '🔮 Jalankan Prediction';
+        btn.disabled = false;
+    }
+}
+
+// Method info
+document.getElementById('methodSelect')?.addEventListener('change', (e) => {
+    const info = document.getElementById('methodInfo');
+    const method = e.target.value;
+    const messages = {
+        'auto': '🤖 Sistem akan pilih metode berdasarkan kualitas data (≥24 bulan: Prophet, ≥12: ARIMA, <12: Holt)',
+        'holt': '📈 Holt\'s Linear: Cepat, cocok untuk data minimalis dengan trend linear',
+        'arima': '📊 ARIMA: Metode statistik klasik, cocok untuk data dengan autocorrelation',
+        'prophet': '🔮 Prophet: Dikembangkan Facebook, cocok untuk data panjang dengan seasonal pattern',
+    };
+    info.textContent = messages[method] || '';
+});
+
+function renderPredictionChart(data, history) {
+    const ctx = document.getElementById('predChart');
+    if (!ctx) return;
+
+    if (predChart) predChart.destroy();
+
+    // Historical labels & values
+    const histLabels = history.map(h => {
+        const d = new Date(h.recorded_at);
+        return d.toLocaleDateString('id-ID', { month: 'short', year: '2-digit' });
+    });
+    const histValues = history.map(h => h.gdi_mean);
+
+    // Forecast labels
+    const lastHistDate = history.length > 0 ? new Date(history[history.length - 1].recorded_at) : new Date();
+    const forecastLabels = data.forecast.map(f => {
+        const d = new Date(lastHistDate);
+        d.setMonth(d.getMonth() + f.month_ahead);
+        return d.toLocaleDateString('id-ID', { month: 'short', year: '2-digit' });
+    });
+
+    const allLabels = [...histLabels, ...forecastLabels];
+
+    const histPoints = [...histValues, ...Array(forecastLabels.length).fill(null)];
+
+    const predPoints = [
+        ...Array(histLabels.length - 1).fill(null),
+        histValues[histValues.length - 1],
+        ...data.forecast.map(f => f.predicted),
+    ];
+
+    const ciUpper = [
+        ...Array(histLabels.length - 1).fill(null),
+        histValues[histValues.length - 1],
+        ...data.forecast.map(f => f.upper_ci),
+    ];
+
+    const ciLower = [
+        ...Array(histLabels.length - 1).fill(null),
+        histValues[histValues.length - 1],
+        ...data.forecast.map(f => f.lower_ci),
+    ];
+
+    predChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: allLabels,
+            datasets: [
+                {
+                    label: '90% CI Upper',
+                    data: ciUpper,
+                    borderColor: 'rgba(245, 158, 11, 0)',
+                    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+                    fill: '+1',
+                    pointRadius: 0,
+                    tension: 0.3,
+                },
+                {
+                    label: '90% CI Lower',
+                    data: ciLower,
+                    borderColor: 'rgba(245, 158, 11, 0)',
+                    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+                    fill: false,
+                    pointRadius: 0,
+                    tension: 0.3,
+                },
+                {
+                    label: 'Historical',
+                    data: histPoints,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderWidth: 3,
+                    tension: 0.3,
+                    fill: true,
+                    pointRadius: 4,
+                },
+                {
+                    label: 'Predicted',
+                    data: predPoints,
+                    borderColor: '#f59e0b',
+                    borderWidth: 3,
+                    borderDash: [8, 4],
+                    tension: 0.3,
+                    fill: false,
+                    pointRadius: 5,
+                    pointBackgroundColor: '#f59e0b',
+                    pointBorderColor: 'white',
+                    pointBorderWidth: 2,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: true, position: 'top' },
+                title: {
+                    display: true,
+                    text: `Prediksi GDI ${data.kode} (${data.nama}) — ${data.horizon_months || data.forecast_months} bulan ke depan`,
+                    font: { size: 14, weight: 'bold' },
+                    color: '#1e3a8a',
+                },
+            },
+            scales: {
+                y: { title: { display: true, text: 'GDI Score' } },
+                x: { title: { display: true, text: 'Bulan' } }
+            }
+        }
+    });
+}
+
+function renderSummary(data) {
+    const summary = document.getElementById('resultSummary');
+    summary.style.display = 'block';
+
+    // ============================================================
+    // HITUNG ULANG trend DARI SLOPE (bukan dari backend)
+    // Ini mencegah inkonsistensi label vs slope
+    // ============================================================
+    const slope = (typeof data.trend_slope === 'number') ? data.trend_slope : 0;
+
+    let computedStatus, trendIcon, trendColor;
+    if (slope > 0.1) {
+        computedStatus = 'Naik';
+        trendIcon = '📈';
+        trendColor = '#10b981';  // hijau
+    } else if (slope < -0.1) {
+        computedStatus = 'Turun';
+        trendIcon = '📉';
+        trendColor = '#ef4444';  // merah
+    } else {
+        computedStatus = 'Stabil';
+        trendIcon = '➡️';
+        trendColor = '#64748b';  // abu
+    }
+
+    // ============================================================
+    // Safe formatting — handle null/undefined
+    // ============================================================
+    const slopeDisplay = (typeof data.trend_slope === 'number')
+        ? `${data.trend_slope >= 0 ? '+' : ''}${data.trend_slope.toFixed(4)}/bulan`
+        : 'N/A';
+
+    const lastObserved = (typeof data.last_observed === 'number')
+        ? data.last_observed.toFixed(2)
+        : 'N/A';
+
+    const mapeDisplay = (typeof data.mape === 'number')
+        ? `${data.mape.toFixed(2)}%`
+        : 'N/A';
+
+    // ============================================================
+    // Method display — tampilkan metode yang dipakai
+    // ============================================================
+    const method = data.method || 'Unknown';
+
+    summary.innerHTML = `
+        <div style="
+            background: #f8fafc;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid ${trendColor};
+        ">
+            <div style="font-weight: bold; color: #1e3a8a; margin-bottom: 0.5rem;">
+                📊 Hasil Prediction
+            </div>
+            <div style="font-size: 0.85rem; line-height: 1.8;">
+                <div><strong>Method:</strong> <span style="color: #8b5cf6;">${method}</span></div>
+                <div><strong>Trend:</strong> <span style="color: ${trendColor}; font-weight: bold;">${trendIcon} ${computedStatus}</span></div>
+                <div><strong>Slope:</strong> ${slopeDisplay}</div>
+                <div><strong>Last Observed:</strong> ${lastObserved}</div>
+                <div><strong>MAPE:</strong> ${mapeDisplay}</div>
+            </div>
+        </div>
+    `;
+}
+
+function renderForecastTable(data) {
+    const container = document.getElementById('forecastTable');
+
+    container.innerHTML = `
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+            <thead>
+                <tr style="background: #f8fafc;">
+                    <th style="padding: 0.5rem; text-align: left;">Bulan</th>
+                    <th style="padding: 0.5rem; text-align: right;">Prediksi</th>
+                    <th style="padding: 0.5rem; text-align: right;">Lower CI</th>
+                    <th style="padding: 0.5rem; text-align: right;">Upper CI</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${data.forecast.map(f => `
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 0.5rem;">+${f.month_ahead} bulan</td>
+                        <td style="padding: 0.5rem; text-align: right; font-weight: bold; color: #f59e0b;">${f.predicted.toFixed(2)}</td>
+                        <td style="padding: 0.5rem; text-align: right; color: #94a3b8;">${f.lower_ci.toFixed(2)}</td>
+                        <td style="padding: 0.5rem; text-align: right; color: #94a3b8;">${f.upper_ci.toFixed(2)}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+// Init
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadWKP();
+
+    document.getElementById('wkpSelect').addEventListener('change', checkHistoricalData);
+    document.getElementById('runBtn').addEventListener('click', runPrediction);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+
+{% block title %}{% block admin_title %}Admin — GeoSDI{% endblock %}{% endblock %}
+
+{% block content %}
+<style>
+    .admin-user-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.4rem 0.8rem;
+        background: #f1f5f9;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        color: #1e3a8a;
+        text-decoration: none;
+        font-weight: 500;
+        cursor: pointer;
+        border: 1px solid #e2e8f0;
+        transition: all 0.15s;
+    }
+    .admin-user-chip:hover {
+        background: #e0e7ff;
+        border-color: #c7d2fe;
+    }
+    .admin-user-avatar {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+        color: white;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.75rem;
+    }
+    .admin-topbar {
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 1rem;
+        position: relative;
+    }
+    .admin-dropdown {
+        position: absolute;
+        top: calc(100% + 4px);
+        right: 0;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+        border: 1px solid #e2e8f0;
+        min-width: 200px;
+        padding: 0.35rem;
+        display: none;
+        z-index: 100;
+    }
+    .admin-dropdown.open { display: block; }
+    .admin-dropdown a {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        border-radius: 6px;
+        text-decoration: none;
+        color: #334155;
+        font-size: 0.88rem;
+    }
+    .admin-dropdown a:hover { background: #f1f5f9; }
+    .admin-dropdown a.danger { color: #dc2626; }
+    .admin-dropdown a.danger:hover { background: #fef2f2; }
+    .admin-dropdown .divider {
+        height: 1px;
+        background: #e2e8f0;
+        margin: 0.35rem 0;
+    }
+    .admin-badge-role {
+        font-size: 0.7rem;
+        padding: 0.15rem 0.5rem;
+        border-radius: 10px;
+        background: #dbeafe;
+        color: #1e40af;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+</style>
+
+<div style="display: flex; gap: 2rem;">
+    <!-- Sidebar Admin -->
+    <aside style="
+        width: 240px;
+        flex-shrink: 0;
+        background: white;
+        border-radius: 8px;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        height: fit-content;
+        position: sticky;
+        top: 1rem;
+    ">
+        <h3 style="margin-top: 0; color: #1e3a8a; font-size: 1rem;">
+            ⚙️ Admin Panel
+        </h3>
+
+        <nav style="display: flex; flex-direction: column; gap: 0.25rem;">
+            <a href="/admin/wkp" style="
+                padding: 0.6rem 0.75rem;
+                border-radius: 6px;
+                color: #1e3a8a;
+                text-decoration: none;
+                font-size: 0.9rem;
+                {% if active == 'wkp' %}background: #eff6ff; font-weight: bold;{% endif %}
+            ">📋 Daftar WKP</a>
+
+            <a href="/admin/wkp/new" style="
+                padding: 0.6rem 0.75rem;
+                border-radius: 6px;
+                color: #1e3a8a;
+                text-decoration: none;
+                font-size: 0.9rem;
+                {% if active == 'wkp_new' %}background: #eff6ff; font-weight: bold;{% endif %}
+            ">➕ Tambah WKP</a>
+
+            <a href="/admin/gdi/calculate" style="
+                padding: 0.6rem 0.75rem;
+                border-radius: 6px;
+                color: #1e3a8a;
+                text-decoration: none;
+                font-size: 0.9rem;
+                {% if active == 'gdi_calc' %}background: #eff6ff; font-weight: bold;{% endif %}
+            ">🧮 GDI Calculator</a>
+
+            <a href="/admin/time-series/input" style="
+                padding: 0.6rem 0.75rem;
+                border-radius: 6px;
+                color: #1e3a8a;
+                text-decoration: none;
+                font-size: 0.9rem;
+                {% if active == 'time_series' %}background: #eff6ff; font-weight: bold;{% endif %}
+            ">📈 Time Series Input</a>
+
+            <a href="/admin/prediction/run" style="
+                padding: 0.6rem 0.75rem;
+                border-radius: 6px;
+                color: #1e3a8a;
+                text-decoration: none;
+                font-size: 0.9rem;
+                {% if active == 'prediction' %}background: #eff6ff; font-weight: bold;{% endif %}
+            ">🔮 Prediction Runner</a>
+
+            <a href="/admin/scenarios/build" style="
+                padding: 0.6rem 0.75rem;
+                border-radius: 6px;
+                color: #1e3a8a;
+                text-decoration: none;
+                font-size: 0.9rem;
+                {% if active == 'scenario' %}background: #eff6ff; font-weight: bold;{% endif %}
+            ">🎯 Scenario Builder</a>
+
+            <a href="/admin/data-quality" style="
+                padding: 0.6rem 0.75rem;
+                border-radius: 6px;
+                color: #1e3a8a;
+                text-decoration: none;
+                font-size: 0.9rem;
+                {% if active == 'data_quality' %}background: #eff6ff; font-weight: bold;{% endif %}
+            ">📊 Data Quality</a>
+
+            <a href="/admin/data-quality/check" style="
+                padding: 0.6rem 0.75rem 0.6rem 1.75rem;
+                border-radius: 6px;
+                color: #64748b;
+                text-decoration: none;
+                font-size: 0.85rem;
+                {% if active == 'data_quality_check' %}background: #eff6ff; color: #1e3a8a; font-weight: bold;{% endif %}
+            ">└ ✅ Check WKP</a>
+
+            <a href="/admin/audit-log" style="
+                padding: 0.6rem 0.75rem;
+                border-radius: 6px;
+                color: #1e3a8a;
+                text-decoration: none;
+                font-size: 0.9rem;
+                {% if active == 'audit_log' %}background: #eff6ff; font-weight: bold;{% endif %}
+            ">📜 Audit Log</a>
+
+            <hr style="margin: 0.5rem 0; border: none; border-top: 1px solid #e2e8f0;">
+
+            <!-- 👥 ADMINISTRASI -->
+            <div style="
+                font-size: 0.7rem;
+                color: #94a3b8;
+                text-transform: uppercase;
+                font-weight: 700;
+                padding: 0.25rem 0.75rem;
+                letter-spacing: 0.5px;
+            ">Administrasi</div>
+
+            <a href="/admin/users" style="
+                padding: 0.6rem 0.75rem;
+                border-radius: 6px;
+                color: #1e3a8a;
+                text-decoration: none;
+                font-size: 0.9rem;
+                {% if active == 'users' %}background: #eff6ff; font-weight: bold;{% endif %}
+            ">👥 User Management</a>
+
+            <a href="/profile" style="
+                padding: 0.6rem 0.75rem;
+                border-radius: 6px;
+                color: #1e3a8a;
+                text-decoration: none;
+                font-size: 0.9rem;
+                {% if active == 'profile' %}background: #eff6ff; font-weight: bold;{% endif %}
+            ">👤 Profile Saya</a>
+
+            <hr style="margin: 0.5rem 0; border: none; border-top: 1px solid #e2e8f0;">
+
+            <a href="/dashboard" style="
+                padding: 0.6rem 0.75rem;
+                border-radius: 6px;
+                color: #64748b;
+                text-decoration: none;
+                font-size: 0.9rem;
+            ">← Kembali ke Dashboard</a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main style="flex: 1; min-width: 0;">
+
+        <!-- 👤 Top Bar: User Chip + Logout Dropdown -->
+        {% if current_user %}
+        <div class="admin-topbar">
+            <div class="admin-user-chip" onclick="toggleAdminDropdown(event)">
+                <span class="admin-user-avatar">
+                    {{ current_user.username[0]|upper }}
+                </span>
+                <span>{{ current_user.full_name or current_user.username }}</span>
+                <span class="admin-badge-role">{{ current_user.role }}</span>
+                <span style="font-size: 0.7rem; color: #64748b;">▾</span>
+            </div>
+
+            <div class="admin-dropdown" id="adminDropdown">
+                <a href="/profile">
+                    👤 <span>Profile Saya</span>
+                </a>
+                {% if current_user.role == 'admin' %}
+                <a href="/admin/users">
+                    👥 <span>User Management</span>
+                </a>
+                {% endif %}
+                <div class="divider"></div>
+                <a href="/logout" class="danger">
+                    🚪 <span>Logout</span>
+                </a>
+            </div>
+        </div>
+        {% endif %}
+
+        {% block admin_content %}{% endblock %}
+    </main>
+</div>
+
+<script>
+    function toggleAdminDropdown(e) {
+        e.stopPropagation();
+        document.getElementById('adminDropdown').classList.toggle('open');
+    }
+    document.addEventListener('click', function () {
+        const dd = document.getElementById('adminDropdown');
+        if (dd) dd.classList.remove('open');
+    });
+</script>
+{% endblock %}

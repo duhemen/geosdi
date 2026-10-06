@@ -1,0 +1,130 @@
+"""
+GeoSDI — Recalculate GDI untuk Semua WKP
+==========================================
+Generate variables + calculate GDI untuk 156 WKP.
+"""
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+import json
+import random
+from src.shared.database import get_cursor
+from src.shared.logger import setup_logging
+from src.layer5_inference.analytics.gdi_model import compute_gdi
+
+setup_logging()
+random.seed(42)
+
+
+def generate_variables(status, kapasitas):
+    """Generate variabel berdasarkan status & kapasitas."""
+    # Base by status
+    if status == "Operasi":
+        base = {"R": 0.85, "T": 0.90, "E": 0.85, "P": 0.80,
+                "S": 0.75, "N": 0.75, "C": 0.15, "H": 0.85}
+        # Kapasitas tinggi = reservoir & ekonomi tinggi
+        if kapasitas:
+            if kapasitas >= 200:
+                base["R"] = 0.95
+                base["E"] = 0.90
+            elif kapasitas >= 100:
+                base["R"] = 0.90
+    elif status == "Konstruksi":
+        base = {"R": 0.75, "T": 0.60, "E": 0.65, "P": 0.65,
+                "S": 0.65, "N": 0.70, "C": 0.25, "H": 0.45}
+    elif status == "Eksplorasi":
+        base = {"R": 0.65, "T": 0.40, "E": 0.45, "P": 0.55,
+                "S": 0.60, "N": 0.75, "C": 0.30, "H": 0.25}
+    else:  # Perencanaan
+        base = {"R": 0.55, "T": 0.30, "E": 0.35, "P": 0.50,
+                "S": 0.55, "N": 0.75, "C": 0.25, "H": 0.15}
+
+    # Add noise
+    for k in base:
+        base[k] = max(0, min(1, base[k] + random.uniform(-0.1, 0.1)))
+
+    return base
+
+
+def main():
+    print("=" * 60)
+    print("  Recalculate GDI for All WKP")
+    print("=" * 60)
+
+    with get_cursor() as cur:
+        # Hapus GDI lama (opsional)
+        print("\n🗑️  Clearing old GDI scores...")
+        cur.execute("DELETE FROM geosdi.gdi_scores;")
+
+        # Ambil semua WKP
+        cur.execute("""
+            SELECT id, kode, nama, status, kapasitas_mw
+            FROM geosdi.work_areas
+            ORDER BY kode;
+        """)
+        wkps = cur.fetchall()
+
+        print(f"\n📊 Processing {len(wkps)} WKP...\n")
+
+        for wa in wkps:
+            # Generate variables
+            vars_data = generate_variables(wa["status"], wa["kapasitas_mw"])
+
+            # Compute GDI
+            result = compute_gdi(
+                kode=wa["kode"],
+                nama=wa["nama"],
+                variables=vars_data,
+            )
+
+            # Insert ke gdi_scores
+            cur.execute("""
+                INSERT INTO geosdi.gdi_scores
+                    (work_area_id, gdi_mean, gdi_std, gdi_median,
+                     gdi_ci_lower, gdi_ci_upper, status,
+                     var_r, var_t, var_e, var_p, var_s, var_n, var_c, var_h,
+                     contributions, weights_used, n_samples)
+                VALUES
+                    (%s, %s, %s, %s, %s, %s, %s,
+                     %s, %s, %s, %s, %s, %s, %s, %s,
+                     %s::jsonb, %s::jsonb, %s);
+            """, (
+                wa["id"], result.mean, result.std, result.median,
+                result.ci_lower, result.ci_upper, result.status,
+                vars_data["R"], vars_data["T"], vars_data["E"], vars_data["P"],
+                vars_data["S"], vars_data["N"], vars_data["C"], vars_data["H"],
+                json.dumps(result.contributions),
+                json.dumps(result.weights_used),
+                result.n_samples,
+            ))
+
+            if wa["kode"] in ["WKP001", "WKP002", "WKP003", "WKP004", "WKP005", "WKP006"]:
+                print(f"   ✅ {wa['kode']:8} {wa['nama']:20} GDI: {result.mean:.2f} ({result.status})")
+
+    # Verifikasi
+    with get_cursor() as cur:
+        cur.execute("SELECT COUNT(*) AS cnt FROM geosdi.gdi_scores;")
+        cnt = cur.fetchone()["cnt"]
+
+        cur.execute("""
+            SELECT status, COUNT(*) AS cnt
+            FROM geosdi.gdi_scores
+            GROUP BY status
+            ORDER BY cnt DESC;
+        """)
+        by_status = cur.fetchall()
+
+    print()
+    print(f"📊 Total GDI scores: {cnt}")
+    print(f"\n📈 By Status:")
+    for r in by_status:
+        print(f"   {r['status']}: {r['cnt']}")
+    print()
+    print("=" * 60)
+    print("  ✅ RECALCULATION COMPLETE")
+    print("=" * 60)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,44 @@
+﻿# ============================================
+# GeoSDI Geothermal v2.0 — Docker Compose
+# ============================================
+# Versi Fase 2A: PostgreSQL + PostGIS dulu
+# Service lain ditambahkan kemudian.
+# ============================================
+
+services:
+  # ----------------------------------------
+  # PostgreSQL + PostGIS (Database Utama)
+  # ----------------------------------------
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: geosdi-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-geosdi}
+      POSTGRES_USER: ${POSTGRES_USER:-geosdi}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-geosdi_dev_2026}
+      # Optimization untuk performa
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+      TZ: Asia/Jakarta
+      PGTZ: Asia/Jakarta
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - geosdi_postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/docker/init-db:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-geosdi} -d ${POSTGRES_DB:-geosdi}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - geosdi-network
+
+volumes:
+  geosdi_postgres_data:
+    name: geosdi_postgres_data
+
+networks:
+  geosdi-network:
+    name: geosdi-network
+    driver: bridge

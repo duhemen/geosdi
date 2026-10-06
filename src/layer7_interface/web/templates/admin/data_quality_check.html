@@ -1,0 +1,149 @@
+{% extends "admin/base_admin.html" %}
+
+{% block admin_title %}Data Quality Check — GeoSDI Admin{% endblock %}
+
+{% block admin_content %}
+<h1 style="margin-top: 0;">✅ Data Quality Check</h1>
+<p style="color: #64748b;">
+    Cek kualitas data sebelum menjalankan prediksi.
+</p>
+
+<div style="
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    margin-bottom: 1.5rem;
+">
+    <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+        <label style="font-weight: bold;">Pilih WKP:</label>
+        <select id="wkpSelect" style="padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px; min-width: 250px;">
+            <option value="">⏳ Loading...</option>
+        </select>
+        <button id="checkBtn" style="
+            background: #3b82f6; color: white; border: none;
+            padding: 0.6rem 1.2rem; border-radius: 6px;
+            font-weight: bold; cursor: pointer;
+        ">🔍 Cek Kualitas</button>
+    </div>
+</div>
+
+<div id="resultContainer"></div>
+
+<script>
+async function loadWKP() {
+    const resp = await fetch('/api/nodes?page_size=500&data_quality=verified');
+    const data = await resp.json();
+    const select = document.getElementById('wkpSelect');
+    select.innerHTML = '<option value="">— Pilih WKP —</option>' +
+        data.data.map(w => `<option value="${w.kode}">${w.kode} — ${w.nama}</option>`).join('');
+}
+
+async function checkQuality() {
+    const kode = document.getElementById('wkpSelect').value;
+    if (!kode) { alert('Pilih WKP!'); return; }
+
+    document.getElementById('resultContainer').innerHTML = '<p>⏳ Checking...</p>';
+
+    const resp = await fetch(`/api/admin/time-series/${kode}`);
+    const data = await resp.json();
+
+    const points = data.count;
+    const hasEnoughData = points >= 24;
+    const hasMinData = points >= 12;
+
+    // Missing data check
+    let missingMonths = [];
+    const dates = data.data.map(d => new Date(d.recorded_at));
+    if (dates.length >= 2) {
+        const sorted = dates.sort((a, b) => a - b);
+        for (let i = 1; i < sorted.length; i++) {
+            const diffMonths = (sorted[i].getFullYear() - sorted[i-1].getFullYear()) * 12 +
+                              (sorted[i].getMonth() - sorted[i-1].getMonth());
+            if (diffMonths > 1) {
+                missingMonths.push({
+                    from: sorted[i-1].toISOString().split('T')[0],
+                    to: sorted[i].toISOString().split('T')[0],
+                });
+            }
+        }
+    }
+
+    // Recommendation
+    let recommendation, statusColor, statusIcon, statusMsg;
+    if (hasEnoughData) {
+        recommendation = 'Prophet atau SARIMA';
+        statusColor = '#10b981';
+        statusIcon = '✅';
+        statusMsg = 'Data siap untuk prediksi akurat';
+    } else if (hasMinData) {
+        recommendation = 'Holt Linear (data terbatas)';
+        statusColor = '#f59e0b';
+        statusIcon = '⚠️';
+        statusMsg = 'Data cukup, tapi rekomendasi tambah 12+ bulan lagi';
+    } else {
+        recommendation = 'Tidak cukup untuk prediksi';
+        statusColor = '#ef4444';
+        statusIcon = '❌';
+        statusMsg = 'Butuh minimal 12 data points untuk prediksi';
+    }
+
+    document.getElementById('resultContainer').innerHTML = `
+        <div style="
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        ">
+            <div style="
+                background: ${statusColor}15;
+                border-left: 4px solid ${statusColor};
+                padding: 1rem;
+                border-radius: 8px;
+                margin-bottom: 1.5rem;
+            ">
+                <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">
+                    ${statusIcon} <strong>${statusMsg}</strong>
+                </div>
+            </div>
+
+            <h3 style="color: #1e3a8a;">📊 Detail Data</h3>
+            <table style="width: 100%; margin-bottom: 1.5rem; font-size: 0.9rem;">
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                    <td style="padding: 0.5rem;">Data points</td>
+                    <td style="padding: 0.5rem; text-align: right; font-weight: bold;">
+                        ${points} bulan
+                    </td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                    <td style="padding: 0.5rem;">Missing months</td>
+                    <td style="padding: 0.5rem; text-align: right; font-weight: bold;">
+                        ${missingMonths.length}
+                    </td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                    <td style="padding: 0.5rem;">Rekomendasi model</td>
+                    <td style="padding: 0.5rem; text-align: right; font-weight: bold; color: ${statusColor};">
+                        ${recommendation}
+                    </td>
+                </tr>
+            </table>
+
+            ${missingMonths.length > 0 ? `
+                <h3 style="color: #92400e;">⚠️ Missing Data</h3>
+                <ul style="font-size: 0.85rem; color: #64748b;">
+                    ${missingMonths.slice(0, 10).map(m => `
+                        <li>Antara ${m.from} dan ${m.to}</li>
+                    `).join('')}
+                </ul>
+            ` : ''}
+        </div>
+    `;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadWKP();
+    document.getElementById('checkBtn').addEventListener('click', checkQuality);
+});
+</script>
+{% endblock %}

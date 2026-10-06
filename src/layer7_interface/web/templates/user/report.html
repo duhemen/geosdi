@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+
+{% block title %}Report Generator — GeoSDI{% endblock %}
+
+{% block content %}
+
+<h1 style="margin-top: 0;">📄 Report Generator</h1>
+<p style="color: #64748b;">
+    Buat laporan PDF atau Excel dari data GeoSDI.
+</p>
+
+<div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 2rem;">
+    <!-- Config -->
+    <div style="background: white; padding: 1.5rem; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); height: fit-content;">
+        <h3 style="margin-top: 0; color: #1e3a8a; font-size: 1rem;">
+            ⚙️ Konfigurasi Report
+        </h3>
+
+        <div style="margin-bottom: 1rem;">
+            <label style="display: block; font-weight: bold; margin-bottom: 0.25rem; font-size: 0.85rem;">
+                Jenis Report
+            </label>
+            <select id="reportType" style="width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px;">
+                <option value="wkp_list">📋 Daftar Semua WKP</option>
+                <option value="gdi_ranking">📊 GDI Ranking</option>
+                <option value="detailed">📈 Detail WKP (1 WKP)</option>
+                <option value="prediction">🔮 Prediksi WKP</option>
+            </select>
+        </div>
+
+        <div id="wkpSelectorContainer" style="margin-bottom: 1rem; display: none;">
+            <label style="display: block; font-weight: bold; margin-bottom: 0.25rem; font-size: 0.85rem;">
+                Pilih WKP
+            </label>
+            <select id="wkpSelect" style="width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px;">
+                <option value="">⏳ Loading...</option>
+            </select>
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+            <label style="display: block; font-weight: bold; margin-bottom: 0.5rem; font-size: 0.85rem;">
+                Format Output
+            </label>
+            <div style="display: flex; gap: 1rem; flex-direction: column;">
+                <label style="cursor: pointer;">
+                    <input type="radio" name="format" value="csv" checked>
+                    📥 CSV (Excel compatible)
+                </label>
+                <label style="cursor: pointer;">
+                    <input type="radio" name="format" value="json">
+                    📋 JSON
+                </label>
+            </div>
+        </div>
+
+        <button id="generateBtn" style="
+            width: 100%;
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 0.75rem;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 0.95rem;
+        ">📄 Generate Report</button>
+    </div>
+
+    <!-- Preview -->
+    <div style="background: white; padding: 1.5rem; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+        <h3 style="margin-top: 0; color: #1e3a8a; font-size: 1rem;">
+            👁️ Preview
+        </h3>
+        <div id="previewContainer" style="
+            background: #f8fafc;
+            padding: 1rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            color: #64748b;
+            min-height: 200px;
+            max-height: 500px;
+            overflow-y: auto;
+        ">
+            Pilih jenis report, lalu klik "Generate Report"
+        </div>
+    </div>
+</div>
+
+<script>
+// Show/hide WKP selector
+document.getElementById('reportType').addEventListener('change', (e) => {
+    const needsWkp = ['detailed', 'prediction'].includes(e.target.value);
+    document.getElementById('wkpSelectorContainer').style.display = needsWkp ? 'block' : 'none';
+});
+
+async function loadWKP() {
+    try {
+        const resp = await fetch('/api/nodes?page_size=500&data_quality=verified');
+        const data = await resp.json();
+        const select = document.getElementById('wkpSelect');
+        select.innerHTML = '<option value="">— Pilih WKP —</option>' +
+            data.data.map(w => `<option value="${w.kode}">${w.kode} — ${w.nama}</option>`).join('');
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+async function generateReport() {
+    const type = document.getElementById('reportType').value;
+    const wkp = document.getElementById('wkpSelect').value;
+    const format = document.querySelector('input[name="format"]:checked').value;
+
+    if (['detailed', 'prediction'].includes(type) && !wkp) {
+        alert('Pilih WKP dulu!');
+        return;
+    }
+
+    const btn = document.getElementById('generateBtn');
+    btn.textContent = '⏳ Generating...';
+    btn.disabled = true;
+
+    try {
+        let data, filename;
+
+        if (type === 'wkp_list') {
+            const resp = await fetch('/api/nodes?page_size=500');
+            data = (await resp.json()).data;
+            filename = 'geosdi_wkp_list';
+        } else if (type === 'gdi_ranking') {
+            const resp = await fetch('/api/gdi');
+            data = (await resp.json()).data;
+            filename = 'geosdi_gdi_ranking';
+        } else if (type === 'detailed') {
+            const resp = await fetch(`/api/nodes/${wkp}`);
+            data = [await resp.json()];
+            filename = `geosdi_${wkp}_detail`;
+        } else if (type === 'prediction') {
+            // Preview prediction
+            const resp = await fetch(`/api/admin/time-series/${wkp}`);
+            data = (await resp.json()).data;
+            filename = `geosdi_${wkp}_timeseries`;
+        }
+
+        // Preview
+        document.getElementById('previewContainer').innerHTML = `
+            <div style="margin-bottom: 1rem;">
+                <strong>${filename}.${format}</strong> — ${data.length} rows
+            </div>
+            <pre style="background: white; padding: 0.5rem; border-radius: 4px; font-size: 0.75rem; overflow-x: auto;">
+${JSON.stringify(data.slice(0, 5), null, 2)}
+${data.length > 5 ? `\n... and ${data.length - 5} more rows` : ''}
+            </pre>
+        `;
+
+        // Download
+        if (format === 'csv') {
+            downloadCSV(data, filename);
+        } else {
+            downloadJSON(data, filename);
+        }
+    } catch (e) {
+        alert('Failed: ' + e.message);
+    } finally {
+        btn.textContent = '📄 Generate Report';
+        btn.disabled = false;
+    }
+}
+
+function downloadCSV(data, filename) {
+    if (data.length === 0) return;
+
+    const headers = Object.keys(data[0]);
+    const rows = data.map(row => headers.map(h => {
+        const v = row[h];
+        return `"${v === null || v === undefined ? '' : String(v).replace(/"/g, '""')}"`;
+    }).join(','));
+
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    triggerDownload(blob, `${filename}.csv`);
+}
+
+function downloadJSON(data, filename) {
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    triggerDownload(blob, `${filename}.json`);
+}
+
+function triggerDownload(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+document.getElementById('generateBtn').addEventListener('click', generateReport);
+document.addEventListener('DOMContentLoaded', loadWKP);
+</script>
+{% endblock %}

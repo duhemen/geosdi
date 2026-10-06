@@ -1,0 +1,375 @@
+{% extends "admin/base_admin.html" %}
+
+{% block admin_title %}Time Series Input — GeoSDI Admin{% endblock %}
+
+{% block admin_content %}
+<h1 style="margin-top: 0;">📈 Input Data Historis</h1>
+<p style="color: #64748b;">
+    Input data GDI per bulan untuk WKP. Data ini digunakan untuk trend analysis & prediction.
+</p>
+
+<div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem;">
+    <!-- Left: Form -->
+    <div style="
+        background: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        height: fit-content;
+    ">
+        <h2 style="margin-top: 0; color: #1e3a8a; font-size: 1rem;">
+            📝 Input Data Point
+        </h2>
+
+        <div style="margin-bottom: 0.75rem;">
+            <label style="display: block; font-weight: bold; margin-bottom: 0.25rem; font-size: 0.85rem;">
+                Pilih WKP
+            </label>
+            <select id="wkpSelect" style="width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px;">
+                <option value="">⏳ Loading...</option>
+            </select>
+        </div>
+
+        <div style="margin-bottom: 0.75rem;">
+            <label style="display: block; font-weight: bold; margin-bottom: 0.25rem; font-size: 0.85rem;">
+                Tanggal
+            </label>
+            <input type="date" id="dateInput" style="width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px;">
+        </div>
+
+        <div style="margin-bottom: 0.75rem;">
+            <label style="display: block; font-weight: bold; margin-bottom: 0.25rem; font-size: 0.85rem;">
+                GDI Mean
+            </label>
+            <input type="number" id="gdiInput" step="0.1" min="0" max="100"
+                style="width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px;">
+        </div>
+
+        <div style="margin-bottom: 0.75rem;">
+            <label style="display: block; font-weight: bold; margin-bottom: 0.25rem; font-size: 0.85rem;">
+                GDI Std (Opsional)
+            </label>
+            <input type="number" id="stdInput" step="0.1" min="0"
+                placeholder="Default: 2.0"
+                style="width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px;">
+        </div>
+
+        <button id="addBtn" style="
+            width: 100%;
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 0.75rem;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+        ">➕ Tambah Data Point</button>
+
+        <hr style="margin: 1rem 0; border: none; border-top: 1px solid #e2e8f0;">
+
+        <h3 style="font-size: 0.9rem; color: #1e3a8a;">📤 Bulk Upload CSV</h3>
+        <input type="file" id="csvInput" accept=".csv"
+            style="width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.85rem;">
+        <p style="font-size: 0.75rem; color: #64748b; margin: 0.5rem 0;">
+            Format CSV: <code>date,gdi_mean,gdi_std</code><br>
+            Contoh: <code>2025-01-01,85.5,2.0</code>
+        </p>
+        <button id="uploadBtn" style="
+            width: 100%;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 0.6rem;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 0.85rem;
+        ">📤 Upload CSV</button>
+    </div>
+
+    <!-- Right: Chart + Table -->
+    <div>
+        <!-- Chart -->
+        <div style="
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 1rem;
+        ">
+            <h2 style="margin-top: 0; color: #1e3a8a; font-size: 1rem;">
+                📊 Time Series Chart
+            </h2>
+            <div style="position: relative; height: 300px;">
+                <canvas id="tsChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Table -->
+        <div style="
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        ">
+            <h2 style="margin-top: 0; color: #1e3a8a; font-size: 1rem;">
+                📋 Data Points
+            </h2>
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                <thead>
+                    <tr style="background: #f8fafc;">
+                        <th style="padding: 0.5rem; text-align: left;">Tanggal</th>
+                        <th style="padding: 0.5rem; text-align: right;">GDI</th>
+                        <th style="padding: 0.5rem; text-align: right;">Std</th>
+                        <th style="padding: 0.5rem; text-align: center;">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="dataTableBody">
+                    <tr><td colspan="4" style="padding: 1rem; text-align: center; color: #94a3b8;">
+                        Pilih WKP dulu
+                    </td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+let tsChart = null;
+let currentKode = '';
+
+async function loadWKP() {
+    try {
+        const resp = await fetch('/api/nodes?page_size=500&data_quality=verified');
+        const data = await resp.json();
+
+        const select = document.getElementById('wkpSelect');
+        select.innerHTML = '<option value="">— Pilih WKP —</option>' +
+            data.data.map(w => `<option value="${w.kode}">${w.kode} — ${w.nama}</option>`).join('');
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+async function loadTimeSeries() {
+    if (!currentKode) return;
+
+    try {
+        const resp = await fetch(`/api/admin/time-series/${currentKode}?limit=24`);
+        const data = await resp.json();
+
+        renderChart(data.data);
+        renderTable(data.data);
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+function renderChart(data) {
+    const ctx = document.getElementById('tsChart');
+    if (!ctx) return;
+
+    if (tsChart) tsChart.destroy();
+
+    if (data.length === 0) {
+        ctx.style.display = 'none';
+        return;
+    }
+    ctx.style.display = 'block';
+
+    const labels = data.map(d => {
+        const date = new Date(d.recorded_at);
+        return date.toLocaleDateString('id-ID', { month: 'short', year: '2-digit' });
+    });
+    const values = data.map(d => d.gdi_mean);
+
+    tsChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: `GDI ${currentKode}`,
+                data: values,
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                borderWidth: 3,
+                tension: 0.3,
+                fill: true,
+                pointBackgroundColor: '#1e3a8a',
+                pointBorderColor: 'white',
+                pointBorderWidth: 2,
+                pointRadius: 5,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                title: {
+                    display: true,
+                    text: `GDI ${currentKode} — ${data.length} data points`,
+                    color: '#1e3a8a',
+                }
+            },
+            scales: {
+                y: { title: { display: true, text: 'GDI Score' } },
+                x: { title: { display: true, text: 'Bulan' } }
+            }
+        }
+    });
+}
+
+function renderTable(data) {
+    const tbody = document.getElementById('dataTableBody');
+    if (!tbody) return;
+
+    if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="padding: 1rem; text-align: center; color: #94a3b8;">Belum ada data</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = data.map(d => {
+        const date = new Date(d.recorded_at);
+        const dateStr = date.toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric' });
+        return `
+            <tr style="border-bottom: 1px solid #f1f5f9;">
+                <td style="padding: 0.5rem;">${dateStr}</td>
+                <td style="padding: 0.5rem; text-align: right; font-weight: bold;">${d.gdi_mean.toFixed(2)}</td>
+                <td style="padding: 0.5rem; text-align: right; color: #94a3b8;">${d.gdi_std ? '± ' + d.gdi_std.toFixed(2) : '-'}</td>
+                <td style="padding: 0.5rem; text-align: center;">
+                    <button onclick="deletePoint('${d.recorded_at}')" style="
+                        background: #ef4444; color: white; border: none;
+                        padding: 0.2rem 0.5rem; border-radius: 4px;
+                        cursor: pointer; font-size: 0.75rem;
+                    ">🗑️</button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+window.deletePoint = async function(date) {
+    if (!confirm(`Hapus data point ${date}?`)) return;
+
+    try {
+        const resp = await fetch('/api/admin/time-series/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ kode: currentKode, recorded_at: date }),
+        });
+        if (!resp.ok) throw new Error('Failed');
+        await loadTimeSeries();
+        alert('Data point dihapus');
+    } catch (e) {
+        alert('Gagal: ' + e.message);
+    }
+};
+
+// Add data point
+document.getElementById('addBtn').addEventListener('click', async () => {
+    if (!currentKode) {
+        alert('Pilih WKP dulu!');
+        return;
+    }
+
+    const date = document.getElementById('dateInput').value;
+    const gdi = parseFloat(document.getElementById('gdiInput').value);
+    const std = document.getElementById('stdInput').value ? parseFloat(document.getElementById('stdInput').value) : null;
+
+    if (!date || isNaN(gdi)) {
+        alert('Isi tanggal dan GDI!');
+        return;
+    }
+
+    try {
+        const resp = await fetch('/api/admin/time-series/input', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                kode: currentKode,
+                recorded_at: date,
+                gdi_mean: gdi,
+                gdi_std: std,
+            }),
+        });
+
+        if (!resp.ok) {
+            const err = await resp.json();
+            throw new Error(err.detail || 'Failed');
+        }
+
+        const result = await resp.json();
+        alert(result.message);
+        await loadTimeSeries();
+    } catch (e) {
+        alert('Gagal: ' + e.message);
+    }
+});
+
+// Bulk upload CSV
+document.getElementById('uploadBtn').addEventListener('click', async () => {
+    if (!currentKode) {
+        alert('Pilih WKP dulu!');
+        return;
+    }
+
+    const fileInput = document.getElementById('csvInput');
+    if (!fileInput.files.length) {
+        alert('Pilih file CSV dulu!');
+        return;
+    }
+
+    const file = fileInput.files[0];
+    const text = await file.text();
+    const lines = text.split('\n').filter(l => l.trim());
+
+    // Skip header
+    const data = [];
+    for (let i = 1; i < lines.length; i++) {
+        const parts = lines[i].split(',');
+        if (parts.length >= 2) {
+            data.push({
+                date: parts[0].trim(),
+                gdi_mean: parseFloat(parts[1].trim()),
+                gdi_std: parts[2] ? parseFloat(parts[2].trim()) : null,
+            });
+        }
+    }
+
+    if (data.length === 0) {
+        alert('Tidak ada data valid di CSV');
+        return;
+    }
+
+    try {
+        const resp = await fetch('/api/admin/time-series/bulk', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ kode: currentKode, data: data }),
+        });
+
+        if (!resp.ok) throw new Error('Failed');
+        const result = await resp.json();
+        alert(`Upload selesai: ${result.success} sukses, ${result.failed} gagal`);
+        await loadTimeSeries();
+    } catch (e) {
+        alert('Gagal: ' + e.message);
+    }
+});
+
+// Init
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadWKP();
+
+    // Set default date to today
+    document.getElementById('dateInput').value = new Date().toISOString().split('T')[0];
+
+    document.getElementById('wkpSelect').addEventListener('change', (e) => {
+        currentKode = e.target.value;
+        loadTimeSeries();
+    });
+});
+</script>
+{% endblock %}

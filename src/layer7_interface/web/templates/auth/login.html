@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login — GeoSDI Geothermal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+        }
+        .login-card {
+            max-width: 420px;
+            width: 100%;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+            border: none;
+        }
+        .login-header {
+            text-align: center;
+            padding: 32px 24px 8px;
+        }
+        .login-logo {
+            font-size: 48px;
+            color: #1e3c72;
+        }
+        .login-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: #1e3c72;
+            margin-top: 8px;
+        }
+        .login-subtitle {
+            color: #6c757d;
+            font-size: 13px;
+            margin-bottom: 0;
+        }
+        .form-control:focus {
+            border-color: #2a5298;
+            box-shadow: 0 0 0 0.2rem rgba(42, 82, 152, 0.15);
+        }
+        .btn-login {
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            border: none;
+            font-weight: 600;
+            padding: 10px;
+        }
+        .btn-login:hover {
+            background: linear-gradient(135deg, #16305e, #1e3c72);
+        }
+        .login-footer {
+            text-align: center;
+            padding: 16px 24px 24px;
+            color: #adb5bd;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="card login-card">
+        <div class="login-header">
+            <div class="login-logo">
+                <i class="bi bi-fire"></i>
+            </div>
+            <div class="login-title">GeoSDI Geothermal</div>
+            <p class="login-subtitle">Platform Geothermal Intelligence Indonesia</p>
+        </div>
+
+        <div class="card-body px-4 pb-2">
+            {% if error %}
+            <div class="alert alert-danger py-2 px-3 small mb-3">
+                <i class="bi bi-exclamation-triangle-fill me-1"></i>{{ error }}
+            </div>
+            {% endif %}
+
+            <form method="post" action="/login">
+                <input type="hidden" name="next" value="{{ next or '' }}">
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Username atau Email</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light">
+                            <i class="bi bi-person"></i>
+                        </span>
+                        <input type="text" name="username" class="form-control"
+                               placeholder="admin" required autofocus
+                               value="{{ username or '' }}">
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Password</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light">
+                            <i class="bi bi-lock"></i>
+                        </span>
+                        <input type="password" name="password" id="password"
+                               class="form-control" placeholder="••••••••" required>
+                        <button class="btn btn-outline-secondary" type="button"
+                                onclick="togglePwd()" tabindex="-1">
+                            <i class="bi bi-eye" id="eyeIcon"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-login w-100 mt-2">
+                    <i class="bi bi-box-arrow-in-right me-1"></i> Masuk
+                </button>
+            </form>
+        </div>
+
+        <div class="login-footer">
+            <i class="bi bi-shield-check me-1"></i>
+            © 2026 GeoSDI — Internal Use Only
+        </div>
+    </div>
+
+    <script>
+        function togglePwd() {
+            const pwd = document.getElementById('password');
+            const icon = document.getElementById('eyeIcon');
+            if (pwd.type === 'password') {
+                pwd.type = 'text';
+                icon.className = 'bi bi-eye-slash';
+            } else {
+                pwd.type = 'password';
+                icon.className = 'bi bi-eye';
+            }
+        }
+    </script>
+</body>
+</html>

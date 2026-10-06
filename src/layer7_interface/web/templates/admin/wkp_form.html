@@ -1,0 +1,167 @@
+{% extends "admin/base_admin.html" %}
+
+{% block admin_title %}{{ mode | title }} WKP — GeoSDI Admin{% endblock %}
+
+{% block admin_content %}
+<h1 style="margin-top: 0;">
+    {% if mode == 'new' %}➕ Tambah WKP Baru{% else %}✏️ Edit WKP: {{ wkp.kode if wkp else '' }}{% endif %}
+</h1>
+
+<div style="
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    max-width: 800px;
+">
+    <form id="wkpForm">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div>
+                <label style="display: block; font-weight: bold; margin-bottom: 0.25rem;">Kode WKP *</label>
+                <input type="text" name="kode" required style="width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px;">
+            </div>
+
+            <div>
+                <label style="display: block; font-weight: bold; margin-bottom: 0.25rem;">Nama WKP *</label>
+                <input type="text" name="nama" required style="width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px;">
+            </div>
+
+            <div>
+                <label style="display: block; font-weight: bold; margin-bottom: 0.25rem;">Provinsi *</label>
+                <input type="text" name="provinsi" required style="width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px;">
+            </div>
+
+            <div>
+                <label style="display: block; font-weight: bold; margin-bottom: 0.25rem;">Kabupaten</label>
+                <input type="text" name="kabupaten" style="width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px;">
+            </div>
+
+            <div>
+                <label style="display: block; font-weight: bold; margin-bottom: 0.25rem;">Status</label>
+                <select name="status" style="width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px;">
+                    <option value="Operasi">Operasi</option>
+                    <option value="Eksplorasi">Eksplorasi</option>
+                    <option value="Konstruksi">Konstruksi</option>
+                    <option value="Perencanaan">Perencanaan</option>
+                    <option value="Dalam Survei">Dalam Survei</option>
+                    <option value="Penawaran/Lelang">Penawaran/Lelang</option>
+                    <option value="IPB Eksplorasi">IPB Eksplorasi</option>
+                    <option value="IPB Eksploitasi">IPB Eksploitasi</option>
+                    <option value="IPB Produksi">IPB Produksi</option>
+                    <option value="Kuasa Pengusahaan">Kuasa Pengusahaan</option>
+                    <option value="Belum Ada Pemegang IPB">Belum Ada Pemegang IPB</option>
+                    <option value="Non-Aktif">Non-Aktif</option>
+                </select>
+            </div>
+
+            <div>
+                <label style="display: block; font-weight: bold; margin-bottom: 0.25rem;">Kapasitas (MW)</label>
+                <input type="number" name="kapasitas_mw" step="0.1" min="0" style="width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px;">
+            </div>
+
+            <div>
+                <label style="display: block; font-weight: bold; margin-bottom: 0.25rem;">Tahun Operasi</label>
+                <input type="number" name="tahun_operasi" min="1900" max="2100" style="width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px;">
+            </div>
+
+            <div>
+                <label style="display: block; font-weight: bold; margin-bottom: 0.25rem;">Latitude</label>
+                <input type="number" name="latitude" step="0.0001" min="-90" max="90" style="width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px;">
+            </div>
+
+            <div>
+                <label style="display: block; font-weight: bold; margin-bottom: 0.25rem;">Longitude</label>
+                <input type="number" name="longitude" step="0.0001" min="-180" max="180" style="width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px;">
+            </div>
+
+            <div>
+                <label style="display: block; font-weight: bold; margin-bottom: 0.25rem;">Data Quality</label>
+                <select name="data_quality" style="width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px;">
+                    <option value="user_provided">User Provided</option>
+                    <option value="verified">Verified</option>
+                    <option value="estimated">Estimated</option>
+                </select>
+            </div>
+
+            <div>
+                <label style="display: block; font-weight: bold; margin-bottom: 0.25rem;">Source</label>
+                <select name="source" style="width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px;">
+                    <option value="user_provided">User Provided</option>
+                    <option value="wikipedia">Wikipedia</option>
+                    <option value="esdm">ESDM</option>
+                    <option value="genesis">Genesis</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+        </div>
+
+        <div style="margin-top: 1rem;">
+            <label style="display: block; font-weight: bold; margin-bottom: 0.25rem;">Keterangan</label>
+            <textarea name="keterangan" rows="3" style="width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px;"></textarea>
+        </div>
+
+        <div style="margin-top: 1.5rem; display: flex; gap: 0.5rem;">
+            <button type="submit" style="
+                background: #10b981; color: white; border: none;
+                padding: 0.75rem 1.5rem; border-radius: 6px;
+                font-weight: bold; cursor: pointer;
+            ">💾 Simpan</button>
+            <a href="/admin/wkp" style="
+                background: #f1f5f9; color: #64748b; padding: 0.75rem 1.5rem;
+                border-radius: 6px; text-decoration: none; font-weight: bold;
+            ">Batal</a>
+        </div>
+    </form>
+</div>
+
+<script>
+const MODE = '{{ mode }}';
+const WKP_KODE = '{{ wkp.kode if wkp else "" }}';
+
+document.getElementById('wkpForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const form = e.target;
+    const formData = new FormData(form);
+
+    const data = {
+        kode: formData.get('kode'),
+        nama: formData.get('nama'),
+        provinsi: formData.get('provinsi'),
+        kabupaten: formData.get('kabupaten') || null,
+        status: formData.get('status'),
+        kapasitas_mw: formData.get('kapasitas_mw') ? parseFloat(formData.get('kapasitas_mw')) : null,
+        tahun_operasi: formData.get('tahun_operasi') ? parseInt(formData.get('tahun_operasi')) : null,
+        latitude: formData.get('latitude') ? parseFloat(formData.get('latitude')) : null,
+        longitude: formData.get('longitude') ? parseFloat(formData.get('longitude')) : null,
+        data_quality: formData.get('data_quality'),
+        source: formData.get('source'),
+        keterangan: formData.get('keterangan') || null,
+    };
+
+    try {
+        const url = MODE === 'new'
+            ? '/api/admin/wkp'
+            : `/api/admin/wkp/${WKP_KODE}`;
+        const method = MODE === 'new' ? 'POST' : 'PUT';
+
+        const resp = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+
+        if (!resp.ok) {
+            const err = await resp.json();
+            throw new Error(err.detail || `HTTP ${resp.status}`);
+        }
+
+        const result = await resp.json();
+        alert(result.message);
+        window.location.href = '/admin/wkp';
+    } catch (err) {
+        alert('Gagal: ' + err.message);
+    }
+});
+</script>
+{% endblock %}

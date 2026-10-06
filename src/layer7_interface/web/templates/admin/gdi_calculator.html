@@ -1,0 +1,272 @@
+{% extends "admin/base_admin.html" %}
+
+{% block admin_title %}GDI Calculator — GeoSDI Admin{% endblock %}
+
+{% block admin_content %}
+<h1 style="margin-top: 0;">🧮 GDI Calculator</h1>
+<p style="color: #64748b;">
+    Hitung GDI untuk WKP dengan mengatur 8 variabel. Preview real-time.
+</p>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+    <!-- Left: Input Form -->
+    <div style="
+        background: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    ">
+        <h2 style="margin-top: 0; color: #1e3a8a; font-size: 1.1rem;">
+            📝 Input Variabel
+        </h2>
+
+        <!-- WKP Selector -->
+        <div style="margin-bottom: 1rem;">
+            <label style="display: block; font-weight: bold; margin-bottom: 0.25rem;">
+                Pilih WKP
+            </label>
+            <select id="wkpSelect" style="width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px;">
+                <option value="">⏳ Loading...</option>
+            </select>
+        </div>
+
+        <!-- Variabel Sliders -->
+        <div id="variablesContainer"></div>
+
+        <!-- Actions -->
+        <div style="margin-top: 1.5rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button id="saveBtn" style="
+                background: #10b981; color: white; border: none;
+                padding: 0.75rem 1.5rem; border-radius: 6px;
+                font-weight: bold; cursor: pointer; flex: 1;
+            ">💾 Simpan ke Database</button>
+            <button id="resetBtn" style="
+                background: #f1f5f9; color: #64748b; border: none;
+                padding: 0.75rem 1.5rem; border-radius: 6px;
+                font-weight: bold; cursor: pointer;
+            ">🔄 Reset</button>
+        </div>
+    </div>
+
+    <!-- Right: Preview -->
+    <div style="
+        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+        padding: 2rem;
+        border-radius: 8px;
+        color: white;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        height: fit-content;
+        position: sticky;
+        top: 1rem;
+    ">
+        <h2 style="margin-top: 0; font-size: 1.1rem;">📊 GDI Preview</h2>
+
+        <div style="text-align: center; padding: 1rem 0;">
+            <div id="gdiValue" style="font-size: 3.5rem; font-weight: bold;">—</div>
+            <div id="gdiStd" style="font-size: 1rem; opacity: 0.9;">± —</div>
+            <div id="gdiStatus" style="
+                display: inline-block;
+                margin-top: 0.5rem;
+                padding: 0.25rem 1rem;
+                background: rgba(255,255,255,0.2);
+                border-radius: 20px;
+                font-size: 0.9rem;
+                font-weight: bold;
+            ">—</div>
+        </div>
+
+        <div style="margin-top: 1rem; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 1rem;">
+            <div style="font-size: 0.85rem; opacity: 0.9;">
+                <div style="margin-bottom: 0.5rem;">
+                    <strong>90% Confidence Interval:</strong>
+                </div>
+                <div id="gdiCI" style="font-size: 1.1rem;">—</div>
+            </div>
+        </div>
+
+        <div style="margin-top: 1rem; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 1rem;">
+            <div style="font-size: 0.85rem; opacity: 0.9;">
+                <strong>Kontribusi per Variabel:</strong>
+                <div id="contributions" style="margin-top: 0.5rem; font-size: 0.85rem;">—</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const VAR_CONFIG = [
+    { key: 'var_r', symbol: 'R', name: 'Reservoir Potential', icon: '🔥', default: 0.75 },
+    { key: 'var_t', symbol: 'T', name: 'Technology Readiness', icon: '⚙️', default: 0.75 },
+    { key: 'var_e', symbol: 'E', name: 'Economic Viability', icon: '💰', default: 0.75 },
+    { key: 'var_p', symbol: 'P', name: 'Policy Support', icon: '📜', default: 0.75 },
+    { key: 'var_s', symbol: 'S', name: 'Social Acceptance', icon: '👥', default: 0.75 },
+    { key: 'var_n', symbol: 'N', name: 'Environmental', icon: '🌿', default: 0.75 },
+    { key: 'var_c', symbol: 'C', name: 'Conflict Intensity', icon: '⚠️', default: 0.20 },
+    { key: 'var_h', symbol: 'H', name: 'Historical Momentum', icon: '📚', default: 0.65 },
+];
+
+let wkps = [];
+let calculateTimeout = null;
+
+// Load WKP list
+async function loadWKP() {
+    try {
+        const resp = await fetch('/api/nodes?page_size=500&data_quality=verified');
+        const data = await resp.json();
+        wkps = data.data;
+
+        const select = document.getElementById('wkpSelect');
+        select.innerHTML = '<option value="">— Pilih WKP —</option>' +
+            wkps.map(w => `<option value="${w.kode}">${w.kode} — ${w.nama}</option>`).join('');
+    } catch (e) {
+        console.error('Failed to load WKP:', e);
+    }
+}
+
+// Render sliders
+function renderSliders() {
+    const container = document.getElementById('variablesContainer');
+    container.innerHTML = VAR_CONFIG.map(v => `
+        <div style="margin-bottom: 0.75rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                <label style="font-weight: bold; font-size: 0.9rem;">
+                    ${v.icon} ${v.name} (${v.symbol})
+                </label>
+                <span id="val-${v.key}" style="
+                    background: #1e3a8a; color: white;
+                    padding: 0.15rem 0.6rem; border-radius: 12px;
+                    font-size: 0.8rem; font-weight: bold;
+                ">${v.default.toFixed(2)}</span>
+            </div>
+            <input type="range" id="slider-${v.key}"
+                min="0" max="1" step="0.01" value="${v.default}"
+                style="width: 100%;"
+                oninput="onSliderChange('${v.key}', this.value)">
+        </div>
+    `).join('');
+}
+
+// Handle slider change
+window.onSliderChange = function(key, value) {
+    document.getElementById(`val-${key}`).textContent = parseFloat(value).toFixed(2);
+    debouncedCalculate();
+};
+
+// Debounced calculate
+function debouncedCalculate() {
+    clearTimeout(calculateTimeout);
+    calculateTimeout = setTimeout(calculate, 300);
+}
+
+// Calculate GDI
+async function calculate() {
+    const kode = document.getElementById('wkpSelect').value;
+    if (!kode) {
+        resetPreview();
+        return;
+    }
+
+    const payload = { kode };
+    VAR_CONFIG.forEach(v => {
+        payload[v.key] = parseFloat(document.getElementById(`slider-${v.key}`).value);
+    });
+
+    try {
+        const resp = await fetch('/api/admin/gdi/calculate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+
+        updatePreview(data);
+    } catch (e) {
+        console.error('Calculate failed:', e);
+    }
+}
+
+function resetPreview() {
+    document.getElementById('gdiValue').textContent = '—';
+    document.getElementById('gdiStd').textContent = '± —';
+    document.getElementById('gdiStatus').textContent = '—';
+    document.getElementById('gdiCI').textContent = '—';
+    document.getElementById('contributions').innerHTML = '—';
+}
+
+function updatePreview(data) {
+    document.getElementById('gdiValue').textContent = data.gdi_mean.toFixed(2);
+    document.getElementById('gdiStd').textContent = `± ${data.gdi_std.toFixed(2)}`;
+    document.getElementById('gdiStatus').textContent = data.status;
+
+    document.getElementById('gdiCI').textContent =
+        `[${data.gdi_ci_lower.toFixed(2)} — ${data.gdi_ci_upper.toFixed(2)}]`;
+
+    const contribs = Object.entries(data.contributions)
+        .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+
+    document.getElementById('contributions').innerHTML = contribs.map(([k, v]) => {
+        const color = v >= 0 ? '#10b981' : '#ef4444';
+        const sign = v >= 0 ? '+' : '';
+        return `<div style="display: flex; justify-content: space-between; padding: 0.15rem 0;">
+            <span>${k}</span>
+            <span style="color: ${color}; font-weight: bold;">${sign}${v.toFixed(4)}</span>
+        </div>`;
+    }).join('');
+}
+
+// Save to database
+document.getElementById('saveBtn')?.addEventListener('click', async () => {
+    const kode = document.getElementById('wkpSelect').value;
+    if (!kode) {
+        alert('Pilih WKP dulu!');
+        return;
+    }
+
+    if (!confirm(`Simpan GDI untuk ${kode}?`)) return;
+
+    const payload = { kode };
+    VAR_CONFIG.forEach(v => {
+        payload[v.key] = parseFloat(document.getElementById(`slider-${v.key}`).value);
+    });
+
+    try {
+        const resp = await fetch('/api/admin/gdi/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+
+        if (!resp.ok) {
+            const err = await resp.json();
+            throw new Error(err.detail || `HTTP ${resp.status}`);
+        }
+
+        const result = await resp.json();
+        alert(result.message);
+    } catch (e) {
+        alert('Gagal: ' + e.message);
+    }
+});
+
+// Reset button
+document.getElementById('resetBtn')?.addEventListener('click', () => {
+    VAR_CONFIG.forEach(v => {
+        document.getElementById(`slider-${v.key}`).value = v.default;
+        document.getElementById(`val-${v.key}`).textContent = v.default.toFixed(2);
+    });
+    debouncedCalculate();
+});
+
+// Init
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadWKP();
+    renderSliders();
+
+    document.getElementById('wkpSelect').addEventListener('change', () => {
+        debouncedCalculate();
+    });
+});
+</script>
+{% endblock %}

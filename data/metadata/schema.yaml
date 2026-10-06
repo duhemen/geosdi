@@ -1,0 +1,16 @@
+﻿# GeoSDI Data Schema
+version: "2.0"
+entities:
+  - name: GeothermalField
+    fields:
+      - id: string
+      - name: string
+      - geometry: polygon
+      - capacity_mw: float
+  - name: Well
+    fields:
+      - id: string
+      - type: production|injection
+      - status: drilling|producing|idle|abandoned
+      - flow_rate: float
+      - temperature: float

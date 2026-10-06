@@ -1,0 +1,185 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}{{ 'Tambah' if mode == 'new' else 'Edit' }} User — GeoSDI Admin{% endblock %}
+
+{% block admin_content %}
+<div style="max-width: 900px; padding: 0 0.5rem;">
+
+    <!-- Back Link -->
+    <a href="/admin/users" class="back-link">
+        <i class="bi bi-arrow-left"></i>
+        <span>Kembali ke daftar</span>
+    </a>
+
+    <!-- Page Header -->
+    <div class="page-header" style="margin-bottom: 1rem;">
+        <div>
+            <h2>
+                {% if mode == 'new' %}
+                <i class="bi bi-person-plus-fill me-2"></i>Tambah User Baru
+                {% else %}
+                <i class="bi bi-pencil-square me-2"></i>Edit User
+                {% endif %}
+            </h2>
+            <p class="subtitle">
+                {% if mode == 'new' %}
+                Buat akun pengguna baru untuk platform GeoSDI
+                {% else %}
+                Perbarui data user <strong>{{ user_data.username }}</strong>
+                {% endif %}
+            </p>
+        </div>
+    </div>
+
+    <!-- Alert -->
+    {% if error %}
+    <div class="alert alert-error">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <span>{{ error }}</span>
+    </div>
+    {% endif %}
+
+    <!-- Form Card -->
+    <div class="card" style="padding: 0; overflow: hidden;">
+        <form method="post"
+              action="{% if mode == 'new' %}/admin/users{% else %}/admin/users/{{ user_data.id }}{% endif %}">
+
+            <div class="card-body">
+
+                <!-- SECTION: Informasi Akun -->
+                <div class="section-label">
+                    <i class="bi bi-person-badge me-1"></i>Informasi Akun
+                </div>
+
+                <div class="form-row">
+                    <!-- Username -->
+                    <div class="form-group">
+                        <label class="form-label">
+                            Username <span class="required">*</span>
+                        </label>
+                        {% if mode == 'new' %}
+                        <input type="text" name="username" class="form-control"
+                               value="{{ user_data.username if user_data else '' }}"
+                               required minlength="3" maxlength="50"
+                               pattern="[A-Za-z0-9_\-]+"
+                               placeholder="cth: analyst01"
+                               title="Huruf, angka, underscore, atau strip">
+                        <div class="form-hint">
+                            <i class="bi bi-info-circle"></i>
+                            3-50 karakter, hanya huruf/angka/_/-
+                        </div>
+                        {% else %}
+                        <input type="text" class="form-control"
+                               value="{{ user_data.username }}" disabled>
+                        <div class="form-hint">
+                            <i class="bi bi-lock"></i>
+                            Username tidak bisa diubah
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Email -->
+                    <div class="form-group">
+                        <label class="form-label">
+                            Email <span class="required">*</span>
+                        </label>
+                        <input type="email" name="email" class="form-control"
+                               value="{{ user_data.email if user_data else '' }}"
+                               required maxlength="255"
+                               placeholder="user@geosdi.local">
+                    </div>
+
+                    <!-- Full Name -->
+                    <div class="form-group">
+                        <label class="form-label">Nama Lengkap</label>
+                        <input type="text" name="full_name" class="form-control"
+                               value="{{ user_data.full_name or '' if user_data else '' }}"
+                               maxlength="150"
+                               placeholder="cth: Budi Santoso">
+                    </div>
+
+                    <!-- Role -->
+                    <div class="form-group">
+                        <label class="form-label">
+                            Role <span class="required">*</span>
+                        </label>
+                        <select name="role" class="form-select" required>
+                            {% for r in roles %}
+                            <option value="{{ r }}"
+                                {% if user_data and user_data.role == r %}selected{% endif %}>
+                                {{ r|capitalize }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-hint">
+                            <strong>admin</strong>: akses penuh ·
+                            <strong>analyst</strong>: WKP & GDI ·
+                            <strong>viewer</strong>: read-only
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION: Keamanan (only for create) -->
+                {% if mode == 'new' %}
+                <div class="section-label" style="margin-top: 1.5rem;">
+                    <i class="bi bi-shield-lock me-1"></i>Keamanan
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">
+                            Password Awal <span class="required">*</span>
+                        </label>
+                        <input type="password" name="password" class="form-control"
+                               required minlength="6" maxlength="128"
+                               placeholder="Minimal 6 karakter">
+                        <div class="form-hint">
+                            <i class="bi bi-info-circle"></i>
+                            Password minimal 6 karakter
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- SECTION: Status -->
+                <div class="section-label" style="margin-top: 1.5rem;">
+                    <i class="bi bi-toggle-on me-1"></i>Status & Pengaturan
+                </div>
+
+                <div class="form-row">
+                    <label class="form-check">
+                        <input type="checkbox" name="is_active"
+                               {% if mode == 'new' or (user_data and user_data.is_active) %}checked{% endif %}>
+                        <span class="form-check-content">
+                            <strong>Akun aktif</strong>
+                            <small>User bisa login ke sistem</small>
+                        </span>
+                    </label>
+
+                    <label class="form-check">
+                        <input type="checkbox" name="must_change_pwd"
+                               {% if mode == 'new' or (user_data and user_data.must_change_pwd) %}checked{% endif %}>
+                        <span class="form-check-content">
+                            <strong>Wajib ganti password</strong>
+                            <small>User diminta ganti password saat login</small>
+                        </span>
+                    </label>
+                </div>
+
+            </div>
+
+            <!-- Form Actions -->
+            <div class="form-actions">
+                <a href="/admin/users" class="btn btn-outline">
+                    <i class="bi bi-x-lg"></i>
+                    <span>Batal</span>
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-save-fill"></i>
+                    <span>{{ 'Simpan User' if mode == 'new' else 'Update User' }}</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

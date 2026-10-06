@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — GeoSDI Geothermal{% endblock %}
+
+{% block content %}
+
+<!-- Hero Section -->
+<div style="
+    background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+    color: white;
+    padding: 2.5rem 2rem;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 20px rgba(30, 58, 138, 0.2);
+">
+    <h1 style="margin: 0 0 0.5rem; font-size: 2rem;">
+        🌋 Selamat Datang di GeoSDI
+    </h1>
+    <p style="margin: 0; opacity: 0.95; font-size: 1.05rem; max-width: 700px;">
+        Platform Geothermal Intelligence Indonesia. Akses data WKP,
+        analisis GDI, prediksi masa depan, dan simulasi kebijakan —
+        semua dalam satu dashboard.
+    </p>
+</div>
+
+<!-- Stats Grid -->
+<section id="statsGrid" style="
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+">
+    <div style="background: white; padding: 1.25rem; border-radius: 10px; border-left: 4px solid #1e3a8a; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+        <div style="color: #64748b; font-size: 0.85rem;">Total WKP</div>
+        <div id="statTotalWkp" style="font-size: 2rem; font-weight: bold; color: #1e3a8a;">—</div>
+    </div>
+    <div style="background: white; padding: 1.25rem; border-radius: 10px; border-left: 4px solid #10b981; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+        <div style="color: #64748b; font-size: 0.85rem;">WKP Operasi</div>
+        <div id="statOperasi" style="font-size: 2rem; font-weight: bold; color: #10b981;">—</div>
+    </div>
+    <div style="background: white; padding: 1.25rem; border-radius: 10px; border-left: 4px solid #f59e0b; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+        <div style="color: #64748b; font-size: 0.85rem;">Total Kapasitas</div>
+        <div id="statKapasitas" style="font-size: 2rem; font-weight: bold; color: #f59e0b;">—</div>
+        <div style="color: #94a3b8; font-size: 0.75rem;">MW</div>
+    </div>
+    <div style="background: white; padding: 1.25rem; border-radius: 10px; border-left: 4px solid #8b5cf6; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+        <div style="color: #64748b; font-size: 0.85rem;">Rata-rata GDI</div>
+        <div id="statAvgGdi" style="font-size: 2rem; font-weight: bold; color: #8b5cf6;">—</div>
+    </div>
+</section>
+
+<!-- Quick Actions -->
+<section style="margin-bottom: 2rem;">
+    <h2 style="color: #1e3a8a; margin-bottom: 1rem; font-size: 1.3rem;">
+        🎯 Akses Cepat
+    </h2>
+
+    <div style="
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1rem;
+    ">
+        <a href="/dashboard" style="
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            text-decoration: none;
+            color: inherit;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        " onmouseover="this.style.borderColor='#3b82f6'; this.style.transform='translateY(-2px)'"
+           onmouseout="this.style.borderColor='transparent'; this.style.transform='translateY(0)'">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">🗺️</div>
+            <div style="font-weight: bold; color: #1e3a8a; margin-bottom: 0.25rem;">
+                Peta WKP
+            </div>
+            <div style="color: #64748b; font-size: 0.85rem;">
+                Lihat sebaran WKP di seluruh Indonesia
+            </div>
+        </a>
+
+        <a href="/analytics" style="
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            text-decoration: none;
+            color: inherit;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        " onmouseover="this.style.borderColor='#10b981'; this.style.transform='translateY(-2px)'"
+           onmouseout="this.style.borderColor='transparent'; this.style.transform='translateY(0)'">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">📊</div>
+            <div style="font-weight: bold; color: #1e3a8a; margin-bottom: 0.25rem;">
+                Analitik GDI
+            </div>
+            <div style="color: #64748b; font-size: 0.85rem;">
+                Ranking & analisis GDI semua WKP
+            </div>
+        </a>
+
+        <a href="/admin/prediction/run" style="
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            text-decoration: none;
+            color: inherit;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        " onmouseover="this.style.borderColor='#8b5cf6'; this.style.transform='translateY(-2px)'"
+           onmouseout="this.style.borderColor='transparent'; this.style.transform='translateY(0)'">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔮</div>
+            <div style="font-weight: bold; color: #1e3a8a; margin-bottom: 0.25rem;">
+                Prediksi GDI
+            </div>
+            <div style="color: #64748b; font-size: 0.85rem;">
+                Prediksi masa depan dengan multi-model
+            </div>
+        </a>
+
+        <a href="/user/report" style="
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            text-decoration: none;
+            color: inherit;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        " onmouseover="this.style.borderColor='#f59e0b'; this.style.transform='translateY(-2px)'"
+           onmouseout="this.style.borderColor='transparent'; this.style.transform='translateY(0)'">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">📄</div>
+            <div style="font-weight: bold; color: #1e3a8a; margin-bottom: 0.25rem;">
+                Generate Report
+            </div>
+            <div style="color: #64748b; font-size: 0.85rem;">
+                Buat laporan PDF & Excel
+            </div>
+        </a>
+    </div>
+</section>
+
+<!-- Top & Bottom WKP -->
+<section style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+    <!-- Top 5 -->
+    <div style="background: white; padding: 1.5rem; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+        <h3 style="color: #10b981; margin-top: 0; font-size: 1rem;">
+            🏆 Top 5 WKP (GDI Tertinggi)
+        </h3>
+        <div id="topWkpList">
+            <p style="color: #94a3b8;">⏳ Loading...</p>
+        </div>
+    </div>
+
+    <!-- Bottom 5 -->
+    <div style="background: white; padding: 1.5rem; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+        <h3 style="color: #ef4444; margin-top: 0; font-size: 1rem;">
+            ⚠️ Bottom 5 WKP (GDI Terendah)
+        </h3>
+        <div id="bottomWkpList">
+            <p style="color: #94a3b8;">⏳ Loading...</p>
+        </div>
+    </div>
+</section>
+
+<!-- GDI Distribution Chart -->
+<section style="background: white; padding: 1.5rem; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+    <h3 style="color: #1e3a8a; margin-top: 0; font-size: 1rem;">
+        📊 Distribusi GDI WKP
+    </h3>
+    <div style="position: relative; height: 300px;">
+        <canvas id="gdiDistChart"></canvas>
+    </div>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+async function loadDashboard() {
+    try {
+        // Stats
+        const statsResp = await fetch('/api/nodes/stats/summary');
+        const stats = await statsResp.json();
+
+        document.getElementById('statTotalWkp').textContent = stats.total_wkp;
+        document.getElementById('statOperasi').textContent = stats.total_operasi;
+        document.getElementById('statKapasitas').textContent = stats.total_kapasitas_mw.toFixed(0);
+
+        // GDI list
+        const gdiResp = await fetch('/api/gdi');
+        const gdiData = await gdiResp.json();
+
+        const sorted = gdiData.data.sort((a, b) => b.gdi_mean - a.gdi_mean);
+        const avgGdi = (sorted.reduce((s, r) => s + r.gdi_mean, 0) / sorted.length).toFixed(1);
+        document.getElementById('statAvgGdi').textContent = avgGdi;
+
+        // Top & bottom
+        renderTopBottom(sorted);
+
+        // Chart
+        renderGdiDistribution(sorted);
+    } catch (e) {
+        console.error('Failed to load dashboard:', e);
+    }
+}
+
+function renderTopBottom(sorted) {
+    const top5 = sorted.slice(0, 5);
+    // Bottom 5: ambil dari akhir, tapi hanya yang GDI < 85 (yang bermasalah)
+    const totalCount = sorted.length;
+    const bottom5 = sorted.slice(-5).reverse();
+
+    const topHtml = top5.map((w, i) => `
+        <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #f1f5f9; font-size: 0.85rem;">
+            <div>
+                <span style="color: #64748b; margin-right: 0.5rem;">#${i + 1}</span>
+                <strong>${w.kode}</strong> ${w.nama}
+            </div>
+            <span style="color: #10b981; font-weight: bold;">${w.gdi_mean.toFixed(1)}</span>
+        </div>
+    `).join('');
+
+    const bottomHtml = bottom5.map((w, i) => {
+        // Nomor dari total, mundur
+        const rank = totalCount - 4 + i;
+        return `
+            <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #f1f5f9; font-size: 0.85rem;">
+                <div>
+                    <span style="color: #64748b; margin-right: 0.5rem;">#${rank}</span>
+                    <strong>${w.kode}</strong> ${w.nama}
+                </div>
+                <span style="color: #ef4444; font-weight: bold;">${w.gdi_mean.toFixed(1)}</span>
+            </div>
+        `;
+    }).join('');
+
+    document.getElementById('topWkpList').innerHTML = topHtml;
+    document.getElementById('bottomWkpList').innerHTML = bottomHtml;
+}
+
+function renderGdiDistribution(sorted) {
+    const ctx = document.getElementById('gdiDistChart');
+    if (!ctx) return;
+
+    const labels = sorted.map(w => w.kode);
+    const values = sorted.map(w => w.gdi_mean);
+    const colors = sorted.map(w => {
+        if (w.gdi_mean >= 85) return '#10b981';
+        if (w.gdi_mean >= 75) return '#3b82f6';
+        if (w.gdi_mean >= 65) return '#f59e0b';
+        return '#ef4444';
+    });
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'GDI Score',
+                data: values,
+                backgroundColor: colors,
+                borderRadius: 6,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                title: {
+                    display: true,
+                    text: 'Distribusi GDI per WKP',
+                    color: '#1e3a8a',
+                }
+            },
+            scales: {
+                y: { beginAtZero: false, min: 60, max: 100 },
+                x: { display: false }
+            }
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', loadDashboard);
+</script>
+{% endblock %}

@@ -1,0 +1,62 @@
+﻿# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+
+# Node
+node_modules/
+.next/
+dist/
+
+# Data besar (jangan commit)
+data/raw/*.geojson
+data/raw/*.xlsx
+data/processed/*.html
+data/processed/*.png
+
+# Logs
+logs/*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Model artifacts
+*.pkl
+*.h5
+*.pt
+*.onnx
+
+# Secrets
+.env
+.env.local
+.env.*.local
+
+# Docker
+*.pid
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Test
+.pytest_cache/
+.coverage
+htmlcov/
+
+# MyPy
+.mypy_cache/
+
+# Ruff
+.ruff_cache/
+
+# Temporary
+tmp/
+temp/

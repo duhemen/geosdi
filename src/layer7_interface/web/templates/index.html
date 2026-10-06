@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}GeoSDI Geothermal — Home{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <h1>🌋 GeoSDI Geothermal</h1>
+    <p>
+        Geospatial Strategic Development Intelligence for Geothermal Ecosystems.
+        Membangun Digital Twin Geothermal Indonesia.
+    </p>
+    <a href="/dashboard" class="btn">
+        <i class="fas fa-map"></i> Buka Dashboard
+    </a>
+</section>
+
+<section class="stats-grid">
+    <div class="stat-card">
+        <div class="label">Total WKP</div>
+        <div class="value" data-stat="total_wkp">{{ stats.total_wkp }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="label">Provinsi</div>
+        <div class="value" data-stat="provinsi">{{ stats.provinsi }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="label">Status Operasi</div>
+        <div class="value" data-stat="operasi">{{ stats.operasi }}</div>
+    </div>
+</section>
+
+<section class="card-grid">
+    <a href="/dashboard" class="card" style="text-decoration: none; color: inherit; cursor: pointer;">
+        <div class="card-icon"><i class="fas fa-map-marked-alt"></i></div>
+        <h3>Peta Interaktif</h3>
+        <p>Visualisasi spasial WKP geothermal di seluruh Indonesia dengan choropleth dan 5 basemap.</p>
+        <div style="margin-top: 1rem; color: #3b82f6; font-weight: bold; font-size: 0.9rem;">
+            Buka Peta →
+        </div>
+    </a>
+
+    <a href="/analytics" class="card" style="text-decoration: none; color: inherit; cursor: pointer;">
+        <div class="card-icon"><i class="fas fa-chart-line"></i></div>
+        <h3>Analitik & Prediksi</h3>
+        <p>GDI Ranking, distribusi probabilistik, dan simulasi intervensi kebijakan.</p>
+        <div style="margin-top: 1rem; color: #3b82f6; font-weight: bold; font-size: 0.9rem;">
+            Lihat Analitik →
+        </div>
+    </a>
+
+    <a href="/dashboard" class="card" style="text-decoration: none; color: inherit; cursor: pointer;">
+        <div class="card-icon"><i class="fas fa-brain"></i></div>
+        <h3>AI Decision Support</h3>
+        <p>Rekomendasi kebijakan berbasis simulasi Bayesian dan machine learning.</p>
+        <div style="margin-top: 1rem; color: #3b82f6; font-weight: bold; font-size: 0.9rem;">
+            Buka Simulator →
+        </div>
+    </a>
+
+    <a href="/api/docs" target="_blank" class="card" style="text-decoration: none; color: inherit; cursor: pointer;">
+        <div class="card-icon"><i class="fas fa-database"></i></div>
+        <h3>Data Terbuka</h3>
+        <p>API publik untuk integrasi data ESDM, BPS, BIG, KLHK, dan sumber eksternal.</p>
+        <div style="margin-top: 1rem; color: #3b82f6; font-weight: bold; font-size: 0.9rem;">
+            Lihat API →
+        </div>
+    </a>
+</section>
+{% endblock %}

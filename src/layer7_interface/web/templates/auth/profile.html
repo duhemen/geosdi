@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}Profile — GeoSDI{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 900px;">
+
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h3 class="mb-0"><i class="bi bi-person-circle me-2"></i>Profile Saya</h3>
+            <p class="text-muted small mb-0">Kelola informasi akun dan password</p>
+        </div>
+        <span class="badge bg-primary px-3 py-2">
+            <i class="bi bi-shield-lock me-1"></i>{{ user.role|upper }}
+        </span>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-danger py-2">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i>{{ error }}
+    </div>
+    {% endif %}
+
+    {% if success %}
+    <div class="alert alert-success py-2">
+        <i class="bi bi-check-circle-fill me-1"></i>{{ success }}
+    </div>
+    {% endif %}
+
+    {% if user.must_change_pwd %}
+    <div class="alert alert-warning">
+        <i class="bi bi-exclamation-circle-fill me-1"></i>
+        <strong>Perhatian!</strong> Anda wajib mengganti password default sebelum melanjutkan.
+    </div>
+    {% endif %}
+
+    <ul class="nav nav-tabs mb-3" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link {% if tab != 'password' %}active{% endif %}"
+               data-bs-toggle="tab" href="#tab-profile">
+                <i class="bi bi-person me-1"></i>Informasi Akun
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if tab == 'password' %}active{% endif %}"
+               data-bs-toggle="tab" href="#tab-password">
+                <i class="bi bi-key me-1"></i>Ganti Password
+            </a>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+        <!-- Tab Profile -->
+        <div class="tab-pane fade {% if tab != 'password' %}show active{% endif %}" id="tab-profile">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <form method="post" action="/profile">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Username</label>
+                                <input type="text" class="form-control" value="{{ user.username }}" disabled>
+                                <div class="form-text">Username tidak bisa diubah.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Role</label>
+                                <input type="text" class="form-control" value="{{ user.role|capitalize }}" disabled>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Nama Lengkap</label>
+                                <input type="text" name="full_name" class="form-control"
+                                       value="{{ user.full_name or '' }}" maxlength="150">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Email <span class="text-danger">*</span></label>
+                                <input type="email" name="email" class="form-control"
+                                       value="{{ user.email }}" required maxlength="255">
+                            </div>
+                        </div>
+                        <hr class="my-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save me-1"></i>Simpan Perubahan
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab Password -->
+        <div class="tab-pane fade {% if tab == 'password' %}show active{% endif %}" id="tab-password">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <form method="post" action="/profile/change-password">
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Password Lama <span class="text-danger">*</span></label>
+                            <input type="password" name="current_password" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Password Baru <span class="text-danger">*</span></label>
+                            <input type="password" name="new_password" class="form-control" required minlength="6">
+                            <div class="form-text">Minimal 6 karakter.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Konfirmasi Password Baru <span class="text-danger">*</span></label>
+                            <input type="password" name="confirm_password" class="form-control" required minlength="6">
+                        </div>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="bi bi-key-fill me-1"></i>Ganti Password
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4 text-muted small">
+        <i class="bi bi-info-circle me-1"></i>
+        Terakhir login:
+        <strong>
+            {% if user.last_login %}
+                {{ user.last_login.strftime('%d %b %Y, %H:%M') }}
+            {% else %}
+                Belum pernah
+            {% endif %}
+        </strong>
+    </div>
+</div>
+{% endblock %}

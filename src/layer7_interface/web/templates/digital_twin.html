@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+{% block title %}Digital Twin — GeoSDI Geothermal{% endblock %}
+
+{% block content %}
+<h1 style="margin-bottom: 1.5rem;">
+    🌏 Digital Twin Geothermal Indonesia
+</h1>
+
+<p style="color: #64748b; margin-bottom: 2rem;">
+    Simulasi skenario kebijakan pada tingkat nasional.
+    Uji dampak sebelum diterapkan.
+</p>
+
+<!-- National Stats -->
+<section id="nationalStats" class="stats-grid">
+    <div class="stat-card"><div class="label">Loading...</div></div>
+</section>
+
+<!-- Health Score -->
+<section id="healthSection" style="
+    background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+">
+    <p>⏳ Loading health score...</p>
+</section>
+
+<!-- Preset Scenarios -->
+<section style="
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+">
+    <h2 style="color: #1e3a8a; margin-bottom: 1rem;">
+        🎯 Preset Scenarios
+    </h2>
+    <p style="color: #64748b; margin-bottom: 1rem; font-size: 0.9rem;">
+        Pilih skenario untuk melihat dampaknya ke GDI nasional.
+    </p>
+    <div id="presetButtons" style="
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 0.75rem;
+    ">
+        <p>⏳ Loading presets...</p>
+    </div>
+</section>
+
+<!-- Scenario Result -->
+<section id="scenarioResult" style="
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    display: none;
+">
+    <h2 style="color: #1e3a8a; margin-bottom: 1rem;">
+        📊 Hasil Simulasi
+    </h2>
+    <div id="scenarioContent"></div>
+</section>
+
+<!-- Scenario Chart -->
+<section id="scenarioChartSection" style="
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    display: none;
+">
+    <h2 style="color: #1e3a8a; margin-bottom: 1rem;">
+        📈 Perbandingan Baseline vs Simulasi
+    </h2>
+    <div style="position: relative; height: 350px;">
+        <canvas id="scenarioChart"></canvas>
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- PRIORITY RANKING SECTION                                      -->
+<!-- ============================================================ -->
+<section style="
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+">
+    <h2 style="color: #1e3a8a; margin-bottom: 1rem;">
+        🎯 Priority Ranking — Top 10 WKP untuk Intervensi
+    </h2>
+    <p style="color: #64748b; margin-bottom: 1rem; font-size: 0.9rem;">
+        Berdasarkan kombinasi impact, urgency, effort, dan confidence.
+    </p>
+    <div id="priorityRanking">
+        <p>⏳ Loading priority ranking...</p>
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- BUDGET OPTIMIZER SECTION                                      -->
+<!-- ============================================================ -->
+<section style="
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    border: 2px solid #10b981;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+">
+    <h2 style="color: #065f46; margin-bottom: 1rem;">
+        💰 Budget Optimizer — Alokasi Anggaran Optimal
+    </h2>
+    <p style="color: #065f46; margin-bottom: 1rem; font-size: 0.9rem;">
+        Simulasi alokasi anggaran berdasarkan ROI tertinggi.
+    </p>
+
+    <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap;">
+        <label style="font-weight: bold; color: #065f46;">Budget (miliar Rp):</label>
+        <input type="number" id="budgetInput" value="10000" min="100" step="1000"
+            style="padding: 0.5rem; border: 2px solid #10b981; border-radius: 6px; font-size: 0.95rem; width: 200px;">
+        <button id="optimizeBtn" style="
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+        ">🎯 Optimize</button>
+    </div>
+
+    <div id="budgetResult" style="display: none;"></div>
+</section>
+
+<!-- ============================================================ -->
+<!-- EXECUTIVE SUMMARY SECTION                                    -->
+<!-- ============================================================ -->
+<section style="
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border: 2px solid #f59e0b;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+">
+    <h2 style="color: #92400e; margin-bottom: 1rem;">
+        📋 Executive Summary — Untuk Decision Maker
+    </h2>
+    <div id="executiveSummary">
+        <p>⏳ Loading executive summary...</p>
+    </div>
+</section>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="/static/js/digital_twin.js?v=2.2.1"></script>
+<script src="/static/js/decision_support.js?v=2.3.0"></script>
+{% endblock %}

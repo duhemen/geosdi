@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — GeoSDI Geothermal{% endblock %}
+
+{% block content %}
+<h1 style="margin-bottom: 1.5rem;">
+    <i class="fas fa-map"></i> Dashboard WKP Geothermal
+</h1>
+
+<section class="stats-grid">
+    <div class="stat-card">
+        <div class="label">Total WKP</div>
+        <div class="value">{{ stats.total_wkp }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="label">Provinsi</div>
+        <div class="value">{{ stats.provinsi }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="label">Status Operasi</div>
+        <div class="value">{{ stats.operasi }}</div>
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- TIME SERIES COMPARISON                                       -->
+<!-- ============================================================ -->
+<section class="gdi-section" style="
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+">
+    <h2 style="
+        color: #1e3a8a;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    ">
+        <i class="fas fa-chart-line"></i> Time Series — Bandingkan WKP
+    </h2>
+
+<!-- Info banner untuk data kosong -->
+<div id="emptyDataBanner" style="
+    display: none;
+    background: #fef3c7;
+    border-left: 4px solid #f59e0b;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    color: #92400e;
+    font-size: 0.9rem;
+">
+    <strong>💡 Starter Kit Mode</strong><br>
+    GeoSDI saat ini menggunakan <strong>18 WKP contoh</strong> sebagai starter kit.
+    Time series dan prediksi <strong>belum tersedia</strong> karena data historis
+    belum disediakan. Anda bisa menambahkan data melalui API atau admin panel.
+</div>
+
+    <!-- Multi-Select UI -->
+    <div style="margin-bottom: 1rem;">
+        <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;">
+            <input type="text" id="wkpSearchInput" placeholder="🔍 Cari WKP (nama atau kode)..."
+                style="
+                    flex: 1;
+                    padding: 0.6rem 1rem;
+                    border: 2px solid #3b82f6;
+                    border-radius: 6px;
+                    font-size: 0.95rem;
+                ">
+            <button id="clearSelectionBtn" style="
+                background: #f1f5f9;
+                color: #64748b;
+                border: 1px solid #cbd5e1;
+                padding: 0.6rem 1rem;
+                border-radius: 6px;
+                font-weight: bold;
+                cursor: pointer;
+                font-size: 0.85rem;
+            ">🗑️ Clear</button>
+        </div>
+
+        <!-- Dropdown Hasil Search -->
+        <div id="searchResults" style="
+            display: none;
+            max-height: 250px;
+            overflow-y: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            background: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            position: relative;
+            z-index: 100;
+        "></div>
+    </div>
+
+    <!-- Selected Chips -->
+    <div id="selectedChips" style="
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        min-height: 32px;
+    "></div>
+
+    <!-- Info Panel -->
+    <div id="comparisonInfo" style="
+        background: #f8fafc;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        color: #64748b;
+        font-size: 0.9rem;
+    ">
+        💡 Pilih minimal 1 WKP untuk mulai perbandingan.
+    </div>
+
+    <!-- Chart -->
+    <div style="position: relative; height: 400px;">
+        <canvas id="comparisonChart"></canvas>
+    </div>
+</section>
+
+<!-- GDI RANKING -->
+<section class="gdi-section" style="
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+">
+    <h2 style="color: #1e3a8a; margin-bottom: 1rem;">
+        <i class="fas fa-chart-bar"></i> GDI Ranking
+    </h2>
+
+    <table id="gdiTable" style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+        <thead>
+            <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
+                <th style="padding: 0.75rem; text-align: left;">Rank</th>
+                <th style="padding: 0.75rem; text-align: left;">WKP</th>
+                <th style="padding: 0.75rem; text-align: left;">Provinsi</th>
+                <th style="padding: 0.75rem; text-align: right;">GDI</th>
+                <th style="padding: 0.75rem; text-align: center;">Status</th>
+                <th style="padding: 0.75rem; text-align: center;">Aksi</th>
+            </tr>
+        </thead>
+        <tbody id="gdiTableBody">
+            <tr><td colspan="6" style="padding: 1rem; text-align: center;">⏳ Loading...</td></tr>
+        </tbody>
+    </table>
+</section>
+
+<!-- MAP -->
+<div class="map-wrapper" style="position: relative;">
+    <div class="map-container">
+        <div id="map"></div>
+    </div>
+
+    <div class="map-controls" style="
+        position: absolute;
+        top: 15px;
+        left: 60px;
+        z-index: 999;
+    ">
+        <button id="toggleChoropleth" class="btn btn-primary" style="
+            padding: 8px 16px;
+            background: white;
+            color: #1e3a8a;
+            border: 2px solid #1e3a8a;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+        ">
+            🎨 Choropleth: OFF
+        </button>
+    </div>
+</div>
+
+<script>
+    const NODES = {{ nodes | tojson }};
+    const CENTER = {{ center | tojson }};
+</script>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/map.js?v=2.3.0"></script>
+<script src="/static/js/gdi.js?v=2.3.0"></script>
+<script src="/static/js/simulator.js?v=2.3.0"></script>
+{% endblock %}

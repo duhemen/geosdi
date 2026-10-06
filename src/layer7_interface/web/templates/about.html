@@ -1,0 +1,501 @@
+{% extends "base.html" %}
+
+{% block title %}About — GeoSDI Geothermal{% endblock %}
+
+{% block content %}
+<style>
+    .about-hero {
+        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+        color: white;
+        padding: 3rem 2rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        text-align: center;
+        box-shadow: 0 10px 30px rgba(30, 58, 138, 0.2);
+    }
+    .about-hero h1 { margin: 0 0 0.75rem; font-size: 2.3rem; color: white; }
+    .about-hero p { margin: 0 auto; font-size: 1.05rem; opacity: 0.95; max-width: 800px; line-height: 1.6; }
+
+    .milestone-banner {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        padding: 1.25rem 1.5rem;
+        border-radius: 10px;
+        margin-bottom: 1.5rem;
+        text-align: center;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+    }
+    .milestone-banner h3 { margin: 0 0 0.5rem; color: white; font-size: 1.15rem; }
+    .milestone-banner p { margin: 0; opacity: 0.95; font-size: 0.92rem; }
+
+    .about-section {
+        background: white;
+        border-radius: 10px;
+        padding: 1.75rem 2rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        margin-bottom: 1.25rem;
+        border-left: 4px solid #3b82f6;
+    }
+    .about-section h2 {
+        margin: 0 0 1rem;
+        color: #1e3a8a;
+        font-size: 1.3rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .about-section p { color: #0f172a; line-height: 1.7; margin-bottom: 0.75rem; }
+    .about-section blockquote {
+        border-left: 4px solid #3b82f6;
+        padding: 0.85rem 1.25rem;
+        margin: 1rem 0;
+        background: #f8fafc;
+        border-radius: 0 8px 8px 0;
+        font-style: italic;
+        color: #64748b;
+        font-size: 1rem;
+        line-height: 1.6;
+    }
+
+    .stat-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 0.85rem;
+        margin-top: 1rem;
+    }
+    .stat-item {
+        text-align: center;
+        padding: 1.1rem 0.85rem;
+        background: linear-gradient(135deg, #eff6ff, #dbeafe);
+        border-radius: 10px;
+        border-left: 4px solid #3b82f6;
+        transition: all 0.18s;
+    }
+    .stat-item:hover { transform: translateY(-3px); box-shadow: 0 4px 12px rgba(30,58,138,0.12); }
+    .stat-value { font-size: 1.75rem; font-weight: 800; color: #1e3a8a; line-height: 1; margin-bottom: 0.35rem; }
+    .stat-label { color: #64748b; font-size: 0.8rem; font-weight: 500; }
+
+    .progress-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+        color: #0f172a;
+        font-size: 0.9rem;
+    }
+    .progress-bar {
+        background: #e2e8f0;
+        height: 14px;
+        border-radius: 8px;
+        overflow: hidden;
+        margin-bottom: 1.25rem;
+    }
+    .progress-fill {
+        background: linear-gradient(90deg, #3b82f6, #10b981);
+        height: 100%;
+        width: 90%;
+        transition: width 0.6s ease;
+        border-radius: 8px;
+    }
+    .phase-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 0.6rem;
+        font-size: 0.88rem;
+    }
+    .phase-item {
+        padding: 0.6rem 0.85rem;
+        border-radius: 8px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .phase-item.done { background: #ecfdf5; border-color: #a7f3d0; color: #065f46; }
+    .phase-item.progress { background: #fef3c7; border-color: #fde68a; color: #92400e; }
+    .phase-item.pending { background: #f1f5f9; border-color: #e2e8f0; color: #64748b; }
+
+    .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+    .feature-card {
+        padding: 1.1rem;
+        background: #f8fafc;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+        transition: all 0.18s;
+    }
+    .feature-card:hover { background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+    .feature-card h4 {
+        margin: 0 0 0.6rem;
+        color: #1e3a8a;
+        font-size: 0.92rem;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+    .feature-card ul {
+        margin: 0;
+        padding-left: 1.25rem;
+        font-size: 0.86rem;
+        color: #334155;
+        line-height: 1.75;
+    }
+
+    .doc-list { list-style: none; padding: 0; margin: 1rem 0 0; }
+    .doc-list li { margin-bottom: 0.5rem; }
+    .doc-list a {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
+        color: #3b82f6;
+        text-decoration: none;
+        font-weight: 500;
+        font-size: 0.92rem;
+        padding: 0.45rem 0.75rem;
+        border-radius: 8px;
+        transition: all 0.15s;
+    }
+    .doc-list a:hover { background: #eff6ff; color: #1e3a8a; }
+
+    .version-row {
+        display: grid;
+        grid-template-columns: 200px 1fr;
+        gap: 0.55rem 1rem;
+        font-size: 0.9rem;
+        margin-top: 0.5rem;
+    }
+    .version-row strong { color: #64748b; font-weight: 600; }
+
+    .contrib-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+    .contrib-card {
+        padding: 1.25rem;
+        background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+        text-align: center;
+    }
+    .contrib-card .avatar {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #3b82f6, #1e3a8a);
+        color: white;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.6rem;
+        font-weight: 700;
+        margin-bottom: 0.75rem;
+    }
+    .contrib-card h4 { margin: 0 0 0.25rem; color: #0f172a; font-size: 1rem; }
+    .contrib-card p { margin: 0 0 0.35rem; color: #64748b; font-size: 0.83rem; }
+    .contrib-card a { color: #3b82f6; text-decoration: none; font-size: 0.82rem; }
+</style>
+
+<!-- HERO -->
+<div class="about-hero">
+    <h1>🌋 Tentang GeoSDI Geothermal</h1>
+    <p>Platform Geospatial Strategic Development Intelligence untuk ekosistem panas bumi Indonesia — berbasis data, spasial, temporal, probabilistik, dan sistemik.</p>
+</div>
+
+<!-- MILESTONE BANNER -->
+<div class="milestone-banner">
+    <h3>🎉 Time Series + Digital Twin 100% Working!</h3>
+    <p>18 WKP × 24 bulan = 432 data points. Prediction Engine & Scenario Simulator fully operational.</p>
+</div>
+
+<!-- VISI -->
+<div class="about-section">
+    <h2>🌏 Visi</h2>
+    <p>Membangun <strong>Digital Twin Geothermal Indonesia</strong> — representasi digital yang mampu <strong>memodelkan masa lalu</strong>, <strong>memahami kondisi saat ini</strong>, dan <strong>mensimulasikan masa depan</strong> ekosistem panas bumi Indonesia.</p>
+    <p>Bukan sekadar dashboard, melainkan <em>decision support system</em> yang membantu pemerintah, investor, operator, dan masyarakat membuat keputusan lebih baik di tengah ketidakpastian.</p>
+</div>
+
+<!-- FILOSOFI -->
+<div class="about-section">
+    <h2>🧭 Filosofi</h2>
+    <blockquote>
+        "Kita tidak membangun kalkulator yang memberi jawaban.<br>
+        Kita membangun cermin yang menunjukkan ketidakpastian,<br>
+        dan kompas yang menunjuk arah meskipun berkabut."
+    </blockquote>
+
+    <p style="font-weight: 600; margin-top: 1rem;">5 Aksioma Dasar:</p>
+    <ol style="color: #64748b; font-size: 0.9rem; line-height: 1.9; padding-left: 1.5rem;">
+        <li>GeoSDI adalah <strong>Complex Adaptive System</strong>, bukan kalkulator</li>
+        <li>Tidak ada satu angka tunggal — GDI adalah <strong>distribusi probabilitas</strong></li>
+        <li>Model yang berguna adalah yang <strong>jujur tentang ketidakpastiannya</strong></li>
+        <li>Semua variabel saling bergantung — tidak ada independensi sejati</li>
+        <li>Sistem harus hidup — belajar, update, dan menua bersama datanya</li>
+    </ol>
+</div>
+
+<!-- STATISTIK -->
+<div class="about-section">
+    <h2>📊 Statistik Proyek</h2>
+    <p style="color: #64748b; font-size: 0.88rem;">Per 6 Oktober 2026</p>
+
+    <div class="stat-grid">
+        <div class="stat-item">
+            <div class="stat-value">61</div>
+            <div class="stat-label">WKP di Database</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value">432</div>
+            <div class="stat-label">Data Points History</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value">18</div>
+            <div class="stat-label">WKP dengan History</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value">2,385</div>
+            <div class="stat-label">MW Kapasitas</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value">17</div>
+            <div class="stat-label">Provinsi</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value">79.3</div>
+            <div class="stat-label">GDI Nasional</div>
+        </div>
+    </div>
+</div>
+
+<!-- PROGRESS -->
+<div class="about-section">
+    <h2>🚀 Progress Pengembangan</h2>
+
+    <div class="progress-header">
+        <span>Fase 3.5 — Analytics + Auth + Prediction + Digital Twin + Time Series</span>
+        <span style="color: #1e3a8a;">90%</span>
+    </div>
+    <div class="progress-bar">
+        <div class="progress-fill"></div>
+    </div>
+
+    <div class="phase-grid">
+        <div class="phase-item done"><span>✅</span><span>Fase 0 — Foundation</span></div>
+        <div class="phase-item done"><span>✅</span><span>Fase 1 — Data Layer</span></div>
+        <div class="phase-item done"><span>✅</span><span>Fase 2 — Database Layer</span></div>
+        <div class="phase-item done"><span>✅</span><span>Fase 3 — Analytics Engine</span></div>
+        <div class="phase-item done"><span>✅</span><span>Fase 3.5 — Auth & User Mgmt</span></div>
+        <div class="phase-item done"><span>✅</span><span>Fase 3.7 — Prediction Engine</span></div>
+        <div class="phase-item done"><span>✅</span><span>Fase 3.9 — Digital Twin</span></div>
+        <div class="phase-item done"><span>✅</span><span>Fase 4 — Time Series (18 WKP)</span></div>
+        <div class="phase-item progress"><span>🚧</span><span>Fase 5 — Network Dynamics</span></div>
+    </div>
+</div>
+
+<!-- FITUR UTAMA -->
+<div class="about-section">
+    <h2>✨ Fitur Utama</h2>
+    <div class="feature-grid">
+        <div class="feature-card">
+            <h4>🗺️ Geospatial</h4>
+            <ul>
+                <li>Peta interaktif 5 basemap</li>
+                <li>Choropleth per provinsi</li>
+                <li>Distance matrix antar WKP</li>
+                <li>DBSCAN clustering</li>
+                <li>Radius search</li>
+            </ul>
+        </div>
+        <div class="feature-card">
+            <h4>📊 Analytics</h4>
+            <ul>
+                <li>GDI (Geothermal Dev Index)</li>
+                <li>Monte Carlo 10.000 samples</li>
+                <li>Confidence interval 90%</li>
+                <li>Kontribusi per variabel</li>
+                <li>GDI Calculator</li>
+            </ul>
+        </div>
+        <div class="feature-card">
+            <h4>📈 Time Series</h4>
+            <ul>
+                <li>24 bulan history tracking</li>
+                <li>18 WKP Operasi tracked</li>
+                <li>432 data points</li>
+                <li>Bulk CSV upload</li>
+                <li>Interactive chart</li>
+            </ul>
+        </div>
+        <div class="feature-card">
+            <h4>🔮 Prediction Engine</h4>
+            <ul>
+                <li>Prophet method (Facebook)</li>
+                <li>Forecast 24 bulan</li>
+                <li>Confidence interval</li>
+                <li>Trend analysis</li>
+                <li>MAPE evaluation</li>
+            </ul>
+        </div>
+        <div class="feature-card">
+            <h4>🌐 Digital Twin</h4>
+            <ul>
+                <li>Health Score Nasional</li>
+                <li>GDI Nasional (weighted)</li>
+                <li>7 Preset Scenarios</li>
+                <li>Priority Ranking Top 10</li>
+                <li>Budget Optimizer</li>
+            </ul>
+        </div>
+        <div class="feature-card">
+            <h4>🔐 User Management</h4>
+            <ul>
+                <li>Login/Logout + Session</li>
+                <li>Role: Admin/Analyst/Viewer</li>
+                <li>User CRUD + Reset Password</li>
+                <li>Audit Log terintegrasi</li>
+                <li>Role-Based Access Control</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- TEKNOLOGI -->
+<div class="about-section">
+    <h2>🛠️ Teknologi</h2>
+    <div class="feature-grid">
+        <div class="feature-card">
+            <h4>Backend</h4>
+            <ul>
+                <li>FastAPI 0.136.3</li>
+                <li>Python 3.12</li>
+                <li>Pydantic 2.x</li>
+                <li>Uvicorn (ASGI)</li>
+            </ul>
+        </div>
+        <div class="feature-card">
+            <h4>Database</h4>
+            <ul>
+                <li>PostgreSQL 16.4</li>
+                <li>PostGIS 3.4</li>
+                <li>psycopg2</li>
+                <li>Docker Compose</li>
+            </ul>
+        </div>
+        <div class="feature-card">
+            <h4>Frontend</h4>
+            <ul>
+                <li>Jinja2 + HTML5 + CSS3</li>
+                <li>Vanilla JS</li>
+                <li>Leaflet.js + Chart.js</li>
+                <li>Bootstrap Icons</li>
+            </ul>
+        </div>
+        <div class="feature-card">
+            <h4>Analytics & ML</h4>
+            <ul>
+                <li>NumPy, Pandas, GeoPandas</li>
+                <li>PyMC 6.3.2 (Bayesian)</li>
+                <li>Prophet (forecasting)</li>
+                <li>Scikit-learn</li>
+            </ul>
+        </div>
+        <div class="feature-card">
+            <h4>Security</h4>
+            <ul>
+                <li>bcrypt (password hash)</li>
+                <li>itsdangerous (session)</li>
+                <li>RBAC (3-tier roles)</li>
+                <li>Audit trail</li>
+            </ul>
+        </div>
+        <div class="feature-card">
+            <h4>Infrastructure</h4>
+            <ul>
+                <li>Docker Desktop + WSL2</li>
+                <li>Cloudflare Tunnel</li>
+                <li>geosdi.osvpn.id</li>
+                <li>Structured logging (JSON)</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- VERSI -->
+<div class="about-section">
+    <h2>📅 Versi & Status</h2>
+    <div class="version-row">
+        <strong>Version:</strong><span>2.0.0</span>
+        <strong>Environment:</strong><span>{{ settings.app_env | default('development') }}</span>
+        <strong>Status:</strong><span>Prototype Advanced — 90% production-ready</span>
+        <strong>Last Update:</strong><span>6 Oktober 2026</span>
+        <strong>Total WKP:</strong><span>61 (18 verified + 43 estimated)</span>
+        <strong>WKP dengan History:</strong><span>18 WKP × 24 bulan = 432 data points</span>
+        <strong>National GDI:</strong><span>79.3 (weighted: 87.85)</span>
+        <strong>Health Score:</strong><span>64.81 — "Baik"</span>
+        <strong>Top GDI:</strong><span>PLTP Wayang Windu (89.1 — Optimal)</span>
+    </div>
+</div>
+
+<!-- DOKUMENTASI -->
+<div class="about-section">
+    <h2>📚 Dokumentasi</h2>
+    <ul class="doc-list">
+        <li><a href="/api/docs" target="_blank"><span>🔗</span><span>API Documentation — Swagger UI (interaktif)</span></a></li>
+        <li><a href="https://github.com/duhemen/geosdi/blob/main/README.md" target="_blank" rel="noopener"><span>📖</span><span>README — Status Proyek & Overview</span></a></li>
+        <li><a href="https://github.com/duhemen/geosdi/blob/main/ROADMAP.md" target="_blank" rel="noopener"><span>🗺️</span><span>ROADMAP — Rencana Pengembangan</span></a></li>
+        <li><a href="https://github.com/duhemen/geosdi/blob/main/docs/GDI_EXPLAINED.md" target="_blank" rel="noopener"><span>📊</span><span>GDI Explained — Cara Menghitung GDI</span></a></li>
+        <li><a href="https://github.com/duhemen/geosdi/blob/main/docs/SIMULATOR_GUIDE.md" target="_blank" rel="noopener"><span>🎛️</span><span>Simulator Guide — Cara Pakai Simulator</span></a></li>
+        <li><a href="https://github.com/duhemen/geosdi/tree/main/docs" target="_blank" rel="noopener"><span>📂</span><span>Semua Dokumentasi Teknis</span></a></li>
+    </ul>
+</div>
+
+<!-- KONTRIBUSI -->
+<div class="about-section">
+    <h2>🤝 Kontribusi</h2>
+    <p style="color: #64748b;">GeoSDI adalah proyek terbuka. Kontribusi Anda sangat berarti untuk mempercepat transisi energi bersih Indonesia.</p>
+    <ul style="line-height: 2; margin-top: 0.75rem; padding-left: 1.5rem;">
+        <li>📖 Baca <code>README.md</code> untuk memahami struktur proyek</li>
+        <li>🐛 Laporkan bug atau issue di GitHub</li>
+        <li>💡 Usulkan fitur baru via discussion</li>
+        <li>📝 Perbaiki dokumentasi atau terjemahan</li>
+        <li>🔧 Submit pull request untuk perbaikan kode</li>
+        <li>📊 Kontribusi data WKP atau validasi data existing</li>
+    </ul>
+</div>
+
+<!-- TIM -->
+<div class="about-section">
+    <h2>👥 Tim & Kontributor</h2>
+    <div class="contrib-grid">
+        <div class="contrib-card">
+            <div class="avatar">E</div>
+            <h4>Emen</h4>
+            <p>Project Owner & Maintainer</p>
+            <a href="https://github.com/duhemen" target="_blank" rel="noopener">duhemen</a>
+        </div>
+        <div class="contrib-card">
+            <div class="avatar" style="background: linear-gradient(135deg, #f59e0b, #d97706);">D</div>
+            <h4>DeepSeek</h4>
+            <p>Full Stack Architect & AI Partner</p>
+            <a href="https://deepseek.com" target="_blank" rel="noopener">deepseek.com</a>
+        </div>
+    </div>
+    <p style="text-align: center; margin-top: 1rem; color: #64748b; font-size: 0.85rem;">
+        Terima kasih kepada LUCA, Microsoft Copilot, dan seluruh komunitas open-source yang telah menginspirasi proyek ini.
+    </p>
+</div>
+
+<p style="text-align: center; margin-top: 2rem; color: #64748b; font-size: 0.85rem;">
+    © 2026 — Emen & DeepSeek 🌙<br>
+    <em>"From Observation to Understanding. From Understanding to Prediction. From Prediction to Better Decisions."</em>
+</p>
+
+{% endblock %}

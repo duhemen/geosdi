@@ -1,0 +1,258 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}User Management — GeoSDI Admin{% endblock %}
+
+{% block admin_content %}
+<div style="padding: 0 0.5rem;">
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <div>
+            <h2><i class="bi bi-people-fill me-2"></i>User Management</h2>
+            <p class="subtitle">Kelola akun & role pengguna GeoSDI</p>
+        </div>
+        <a href="/admin/users/new" class="btn btn-primary">
+            <i class="bi bi-person-plus-fill"></i>
+            <span>Tambah User</span>
+        </a>
+    </div>
+
+    <!-- Alerts -->
+    {% if success %}
+    <div class="alert alert-success">
+        <i class="bi bi-check-circle-fill"></i>
+        <span>{{ success }}</span>
+    </div>
+    {% endif %}
+    {% if error %}
+    <div class="alert alert-error">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <span>{{ error }}</span>
+    </div>
+    {% endif %}
+
+    <!-- Filter Bar -->
+    <form method="get" class="filter-bar">
+        <div class="form-group">
+            <label class="form-label">Cari</label>
+            <input type="text" name="search" class="form-control"
+                   placeholder="Username, email, atau nama..."
+                   value="{{ search }}">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Role</label>
+            <select name="role" class="form-select">
+                <option value="">— Semua —</option>
+                <option value="admin" {% if filter_role == 'admin' %}selected{% endif %}>Admin</option>
+                <option value="analyst" {% if filter_role == 'analyst' %}selected{% endif %}>Analyst</option>
+                <option value="viewer" {% if filter_role == 'viewer' %}selected{% endif %}>Viewer</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Status</label>
+            <select name="active" class="form-select">
+                <option value="">— Semua —</option>
+                <option value="true" {% if filter_active == 'true' %}selected{% endif %}>Aktif</option>
+                <option value="false" {% if filter_active == 'false' %}selected{% endif %}>Nonaktif</option>
+            </select>
+        </div>
+        <div class="filter-bar-actions">
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-search"></i>
+                <span>Filter</span>
+            </button>
+            <a href="/admin/users" class="btn btn-outline" title="Reset filter">
+                <i class="bi bi-arrow-clockwise"></i>
+            </a>
+        </div>
+    </form>
+
+    <!-- Users Table -->
+    <div class="table-card">
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Last Login</th>
+                        <th style="text-align: right;">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in users %}
+                    <tr>
+                        <td>
+                            <div class="user-cell">
+                                <div class="user-avatar">{{ u.username[0]|upper }}</div>
+                                <div class="user-info">
+                                    <div class="user-name">
+                                        {{ u.full_name or u.username }}
+                                        {% if u.id == current_user.id %}
+                                        <span class="badge badge-self">Anda</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="user-meta">
+                                        <i class="bi bi-at"></i>{{ u.username }}
+                                        <span class="separator">·</span>
+                                        <i class="bi bi-envelope"></i>{{ u.email }}
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            {% if u.role == 'admin' %}
+                            <span class="badge badge-admin">
+                                <i class="bi bi-shield-fill"></i>Admin
+                            </span>
+                            {% elif u.role == 'analyst' %}
+                            <span class="badge badge-analyst">
+                                <i class="bi bi-graph-up"></i>Analyst
+                            </span>
+                            {% else %}
+                            <span class="badge badge-viewer">
+                                <i class="bi bi-eye"></i>Viewer
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if u.is_active %}
+                            <span class="badge badge-active">
+                                <i class="bi bi-check-circle-fill"></i>Aktif
+                            </span>
+                            {% else %}
+                            <span class="badge badge-inactive">
+                                <i class="bi bi-slash-circle"></i>Nonaktif
+                            </span>
+                            {% endif %}
+                            {% if u.must_change_pwd %}
+                            <span class="badge badge-warning" title="Wajib ganti password"
+                                  style="margin-left:0.25rem;">
+                                <i class="bi bi-key-fill"></i>
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td style="color: var(--gray); font-size: 0.83rem;">
+                            {% if u.last_login %}
+                                <i class="bi bi-clock-history me-1"></i>{{ u.last_login.strftime('%d %b %Y, %H:%M') }}
+                            {% else %}
+                                <em style="color: #cbd5e1;">Belum pernah</em>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-actions">
+                                <a href="/admin/users/{{ u.id }}/edit"
+                                class="btn btn-sm btn-primary btn-action-icon"
+                                data-tooltip="Edit user">
+                                    <i class="bi bi-pencil-fill"></i>
+                                </a>
+
+                                <button type="button"
+                                        class="btn btn-sm btn-warning btn-action-icon"
+                                        data-tooltip="Reset password"
+                                        onclick="openResetModal({{ u.id }}, '{{ u.username }}')">
+                                    <i class="bi bi-key-fill"></i>
+                                </button>
+
+                                {% if u.id != current_user.id %}
+                                    {% if u.is_active %}
+                                    <form method="post" action="/admin/users/{{ u.id }}/delete"
+                                        style="display:inline;"
+                                        onsubmit="return confirm('Nonaktifkan user {{ u.username }}?');">
+                                        <button class="btn btn-sm btn-danger btn-action-icon"
+                                                data-tooltip="Nonaktifkan">
+                                            <i class="bi bi-slash-circle-fill"></i>
+                                        </button>
+                                    </form>
+                                    {% else %}
+                                    <form method="post" action="/admin/users/{{ u.id }}/reactivate"
+                                        style="display:inline;"
+                                        onsubmit="return confirm('Aktifkan kembali user {{ u.username }}?');">
+                                        <button class="btn btn-sm btn-success btn-action-icon"
+                                                data-tooltip="Aktifkan">
+                                            <i class="bi bi-check-circle-fill"></i>
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5">
+                            <div class="empty-state">
+                                <i class="bi bi-inbox"></i>
+                                <h4>Tidak ada user ditemukan</h4>
+                                <p>Coba ubah filter atau tambah user baru.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="table-footer">
+            <i class="bi bi-info-circle"></i>
+            Total: <strong>{{ users|length }}</strong> user
+        </div>
+    </div>
+</div>
+
+<!-- Modal Reset Password -->
+<div class="modal-backdrop" id="resetModal">
+    <div class="modal-box">
+        <form method="post" id="resetForm">
+            <div class="modal-header">
+                <h3><i class="bi bi-key-fill" style="color: var(--accent);"></i>Reset Password</h3>
+                <button type="button" class="modal-close" onclick="closeResetModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size: 0.9rem; color: var(--gray); margin-bottom: 1rem;">
+                    Reset password untuk <strong id="resetUsername" style="color: var(--primary);"></strong>.
+                    User akan diminta ganti password saat login berikutnya.
+                </p>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label">
+                        Password Baru <span class="required">*</span>
+                    </label>
+                    <input type="password" name="new_password" class="form-control"
+                           required minlength="6" placeholder="Minimal 6 karakter">
+                    <div class="form-hint">
+                        <i class="bi bi-info-circle"></i>
+                        Password minimal 6 karakter.
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeResetModal()">
+                    <i class="bi bi-x-lg"></i>
+                    <span>Batal</span>
+                </button>
+                <button type="submit" class="btn btn-warning">
+                    <i class="bi bi-key-fill"></i>
+                    <span>Reset Password</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openResetModal(userId, username) {
+        document.getElementById('resetForm').action = `/admin/users/${userId}/reset-password`;
+        document.getElementById('resetUsername').textContent = username;
+        document.getElementById('resetModal').classList.add('open');
+    }
+    function closeResetModal() {
+        document.getElementById('resetModal').classList.remove('open');
+    }
+    document.getElementById('resetModal').addEventListener('click', function(e) {
+        if (e.target === this) closeResetModal();
+    });
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeResetModal();
+    });
+</script>
+{% endblock %}
