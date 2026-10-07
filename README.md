@@ -973,7 +973,7 @@ GeoSDI menggunakan data dari **sumber publik resmi**:
 
 ---
 
-## 📊 STATISTIK PROYEK (Update 6 Oktober 2026)
+## 📊 STATISTIK PROYEK (Update 7 Oktober 2026)
 
 | Metric | Nilai |
 |--------|-------|
