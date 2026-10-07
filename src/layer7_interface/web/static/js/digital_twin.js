@@ -108,29 +108,40 @@ window.runPreset = async function(name) {
     btn.innerHTML = '⏳ Running...';
     btn.disabled = true;
 
-    try {
-        const resp = await fetch(`/api/digital-twin/scenarios/preset/${name}`);
+    // ✅ AMBIL DARI TOGGLE
+    const enableNetwork = document.getElementById("enable-network-effect")?.checked || false;
+    const decay = parseFloat(document.getElementById("network-decay")?.value || "0.30");
+    const maxHops = parseInt(document.getElementById("network-hops")?.value || "2");
 
-        // === FIX: Baca pesan error dari backend kalau request gagal ===
+    console.log(`🕸️ Network: enabled=${enableNetwork}, decay=${decay}, max_hops=${maxHops}`);
+
+    try {
+        // ✅ BUILD URL DENGAN QUERY PARAMS
+        const params = new URLSearchParams({
+            enable_network: enableNetwork,
+            network_decay: decay,
+            network_max_hops: maxHops,
+        });
+
+        const resp = await fetch(`/api/digital-twin/scenarios/preset/${name}?${params}`);
+
         if (!resp.ok) {
             let errorMsg = `HTTP ${resp.status}`;
             try {
                 const errData = await resp.json();
-                if (errData && errData.detail) {
-                    errorMsg = errData.detail;  // ← Pesan asli dari backend
-                }
-            } catch (jsonErr) {
-                // Response bukan JSON (misal HTML error page), pakai default
-                console.warn('Could not parse error response as JSON', jsonErr);
-            }
+                if (errData && errData.detail) errorMsg = errData.detail;
+            } catch (jsonErr) {}
             throw new Error(errorMsg);
         }
 
         const data = await resp.json();
-
         renderScenarioResult(data);
         renderScenarioChart(data);
         console.log('✅ Scenario result:', data);
+
+        if (data.network && data.network.enabled) {
+            console.log(`🕸️ Network effect: +${data.network.total_effect.toFixed(3)} to ${data.network.n_affected} WKP`);
+        }
     } catch (e) {
         console.error('❌ Scenario failed:', e);
         alert('Tidak dapat menjalankan skenario:\n\n' + e.message);
@@ -217,7 +228,6 @@ function renderScenarioResult(data) {
             </div>
         </div>
 
-
         <div style="margin-top: 1.5rem;">
             <h4 style="color: #1e3a8a; margin-bottom: 0.5rem;">🏆 Top 5 Improvements</h4>
             <ul style="list-style: none; padding: 0;">
@@ -229,6 +239,49 @@ function renderScenarioResult(data) {
                 `).join('')}
             </ul>
         </div>
+
+        ${data.network && data.network.enabled ? `
+        <div style="margin-top: 1.5rem; padding: 1rem; background: linear-gradient(135deg, #f0fdf4, #dcfce7); border-radius: 8px; border-left: 4px solid #10b981;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+                <span style="font-size: 1.2rem;">🕸️</span>
+                <h4 style="color: #065f46; margin: 0;">Network Effect (Spillover)</h4>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem;">
+                <div style="background: white; padding: 0.75rem; border-radius: 6px;">
+                    <div style="color: #065f46; font-size: 0.78rem;">Total Efek Network</div>
+                    <div style="font-size: 1.5rem; font-weight: bold; color: #10b981;">
+                        +${data.network.total_effect.toFixed(3)}
+                    </div>
+                    <div style="font-size: 0.72rem; color: #64748b;">GDI tersebar ke tetangga</div>
+                </div>
+                <div style="background: white; padding: 0.75rem; border-radius: 6px;">
+                    <div style="color: #065f46; font-size: 0.78rem;">WKP Terpengaruh</div>
+                    <div style="font-size: 1.5rem; font-weight: bold; color: #10b981;">
+                        ${data.network.n_affected}
+                    </div>
+                    <div style="font-size: 0.72rem; color: #64748b;">WKP kena spillover</div>
+                </div>
+                <div style="background: white; padding: 0.75rem; border-radius: 6px;">
+                    <div style="color: #065f46; font-size: 0.78rem;">Leverage Ratio</div>
+                    <div style="font-size: 1.5rem; font-weight: bold; color: #10b981;">
+                        ${(data.network.total_effect / Math.abs(data.delta.gdi || 1)).toFixed(2)}×
+                    </div>
+                    <div style="font-size: 0.72rem; color: #64748b;">Network vs direct</div>
+                </div>
+            </div>
+            ${data.network.top_affected && data.network.top_affected.length > 0 ? `
+            <div style="margin-top: 0.75rem;">
+                <div style="font-size: 0.82rem; font-weight: 600; color: #065f46; margin-bottom: 0.4rem;">Top 5 WKP Terpengaruh:</div>
+                ${data.network.top_affected.slice(0, 5).map(w => `
+                    <div style="font-size: 0.78rem; padding: 0.3rem 0.6rem; background: white; border-radius: 4px; margin-bottom: 0.25rem; display: flex; justify-content: space-between;">
+                        <span><strong>${w.kode}</strong> — ${w.nama}</span>
+                        <span style="color: #10b981; font-weight: 600;">+${w.delta_network.toFixed(3)}</span>
+                    </div>
+                `).join("")}
+            </div>
+            ` : ""}
+        </div>
+        ` : ""}
     `;
 
     document.getElementById('scenarioResult').style.display = 'block';

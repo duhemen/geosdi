@@ -1,62 +1,134 @@
-﻿# Python
+﻿# ============================================================
+# GeoSDI .gitignore
+# ============================================================
+
+# ---------- Python ----------
 __pycache__/
 *.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
 *.egg-info/
 .venv/
 venv/
+env/
+ENV/
+
+# ---------- Environment & Secrets ----------
 .env
+.env.local
+.env.*.local
+*.key
+*.pem
 
-# Node
-node_modules/
-.next/
-dist/
+# ---------- Data (BESAR — JANGAN COMMIT!) ----------
+# Semua data mentah di-ignore (bisa di-download ulang dari sumber)
+data/raw/
+data/external/
+data/interim/
+data/processed/
+!data/raw/.gitkeep
+!data/processed/.gitkeep
 
-# Data besar (jangan commit)
-data/raw/*.geojson
-data/raw/*.xlsx
-data/processed/*.html
-data/processed/*.png
+# Khusus file besar
+*.geojson
+*.shp
+*.shx
+*.dbf
+*.kml
+*.gpx
+*.xlsx
+*.xls
+*.pdf
+!data/metadata/*.json
 
-# Logs
-logs/*.log
+# ---------- Notebooks ----------
+.ipynb_checkpoints/
+*.ipynb_checkpoints/
 
-# IDE
+# ---------- Logs ----------
+logs/
+*.log
+
+# ---------- Testing ----------
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+
+# ---------- Type Checking ----------
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# ---------- Linting ----------
+.ruff_cache/
+
+# ---------- IDE ----------
 .vscode/
 .idea/
 *.swp
-
-# OS
+*.swo
+*~
 .DS_Store
 Thumbs.db
 
-# Model artifacts
+# ---------- Tools / Binary ----------
+tools/cloudflared.exe
+tools/*.exe
+
+# ---------- Backup ----------
+backup_*.sql
+*.bak
+*.backup
+*.DEPRECATED
+
+# ---------- Model artifacts ----------
 *.pkl
 *.h5
 *.pt
 *.onnx
+*.joblib
 
-# Secrets
-.env
-.env.local
-.env.*.local
-
-# Docker
+# ---------- Docker ----------
 *.pid
 
-# Notebooks
-.ipynb_checkpoints/
-
-# Test
-.pytest_cache/
-.coverage
-htmlcov/
-
-# MyPy
-.mypy_cache/
-
-# Ruff
-.ruff_cache/
-
-# Temporary
+# ---------- Temporary ----------
 tmp/
 temp/
+*.tmp
+
+# ---------- Node (kalau ada) ----------
+node_modules/
+.next/
+dist/
+
+
+# Large files (>50MB)
+src/layer7_interface/web/static/data/*.geojson
+notebooks/02_interactive_map.ipynb
+data/raw/
+data/processed/
+backup_*.sql
+*.DEPRECATED
+
+# Encryption keys (JANGAN COMMIT!)
+.env
+*.key
+*.pem
+ENCRYPTION_KEY*
+
+# Tools binary
+tools/cloudflared.exe
+
+# Test artifacts & backups
+.coverage
+.coverage.*
+htmlcov/
+test_*.py
+test_*.json
+Untitled*.ipynb
+.pytest_cache/

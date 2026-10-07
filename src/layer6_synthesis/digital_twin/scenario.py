@@ -107,6 +107,11 @@ class Scenario:
     filter_status: Optional[str] = None
     filter_type: Optional[str] = None  # mature/developing/new/exploration
 
+    # === NETWORK-AWARE (BARU) ===
+    enable_network: bool = False       # Aktifkan network propagation?
+    network_decay: float = 0.30        # Atenuasi per hop
+    network_max_hops: int = 2          # Maksimum hop propagasi
+
     # Tuning options
     enable_time_delay: bool = True      # apply 40% untuk 1 tahun
     enable_sensitivity: bool = True     # apply sensitivity per WKP
@@ -144,8 +149,14 @@ class ScenarioResult:
     top_improvements: list[dict]
     top_declines: list[dict]
 
-    # Type breakdown
+        # Type breakdown
     by_type: dict[str, dict]
+
+    # === NETWORK-AWARE (BARU) ===
+    network_enabled: bool = False
+    network_effect: float = 0.0          # Total efek network
+    n_network_affected: int = 0          # Berapa WKP kena efek network
+    network_top_affected: list[dict] = None  # Top WKP yang kena network effect
 
 
 # ============================================================
@@ -330,6 +341,102 @@ def apply_scenario(scenario: Scenario) -> ScenarioResult:
             f"Preset ini tidak dapat dijalankan untuk dataset saat ini."
         )
 
+        # === NETWORK-AWARE PROPAGATION ===
+    network_effect = 0.0
+    n_network_affected = 0
+    network_top_affected = []
+
+    if scenario.enable_network:
+        try:
+            from src.layer6_synthesis.network import build_adjacency_matrix
+
+            adj_matrix = build_adjacency_matrix()
+            n_net = adj_matrix.n_nodes
+
+            # Build map: kode → node index
+            kode_to_idx = {node.kode: i for i, node in enumerate(adj_matrix.nodes)}
+
+            # Delta per WKP dari scenario
+            delta_map = {r["kode"]: r["delta"] for r in results}
+
+            # Propagate via network
+            network_deltas = {}  # { kode: total_network_delta }
+
+            for source_kode, source_delta in delta_map.items():
+                if source_delta == 0:
+                    continue
+
+                src_idx = kode_to_idx.get(source_kode)
+                if src_idx is None:
+                    continue
+
+                # BFS propagate
+                visited = {src_idx: 1.0}
+                frontier = {src_idx: 1.0}
+
+                for hop in range(1, scenario.network_max_hops + 1):
+                    next_frontier = {}
+                    for node_idx, src_inf in frontier.items():
+                        for j in range(n_net):
+                            if j in visited:
+                                continue
+                            w = adj_matrix.matrix[node_idx, j]
+                            if w <= 0:
+                                continue
+                            propagated = src_inf * w * scenario.network_decay
+                            if propagated >= 0.01:
+                                visited[j] = propagated
+                                next_frontier[j] = propagated
+                    frontier = next_frontier
+                    if not frontier:
+                        break
+
+                # Akumulasi delta ke network_deltas
+                for j, inf in visited.items():
+                    if j == src_idx:
+                        continue
+                    target_kode = adj_matrix.nodes[j].kode
+                    network_deltas[target_kode] = network_deltas.get(target_kode, 0.0) + source_delta * inf
+
+            # Apply network delta ke results
+            for r in results:
+                net_delta = network_deltas.get(r["kode"], 0.0)
+                r["network_delta"] = round(net_delta, 4)
+                r["simulated_gdi_with_network"] = round(r["simulated_gdi"] + net_delta, 2)
+
+            # Stats
+            network_effect = sum(network_deltas.values())
+            n_network_affected = len(network_deltas)
+
+            # Top network affected
+            sorted_net = sorted(network_deltas.items(), key=lambda x: x[1], reverse=True)[:10]
+            network_top_affected = [
+                {
+                    "kode": kode,
+                    "nama": next((n.nama for n in adj_matrix.nodes if n.kode == kode), ""),
+                    "delta_network": round(delta, 4),
+                }
+                for kode, delta in sorted_net
+            ]
+
+            log.info(
+                f"Network-aware propagation: {n_network_affected} WKP affected, "
+                f"total network effect = {network_effect:.3f}"
+            )
+        except Exception as e:
+            log.warning(f"Network propagation failed: {e}")
+
+    # Simulated stats
+    simulated_gdis = [r["simulated_gdi"] for r in results]
+    simulated_avg = sum(simulated_gdis) / len(simulated_gdis)
+
+    # Kalau network enabled, pakai simulated_gdi_with_network untuk avg
+    if scenario.enable_network:
+        simulated_with_net = [r.get("simulated_gdi_with_network", r["simulated_gdi"]) for r in results]
+        simulated_avg_final = sum(simulated_with_net) / len(simulated_with_net)
+    else:
+        simulated_avg_final = simulated_avg
+
     # Simulated stats
     simulated_gdis = [r["simulated_gdi"] for r in results]
     simulated_avg = sum(simulated_gdis) / len(simulated_gdis)
@@ -339,15 +446,15 @@ def apply_scenario(scenario: Scenario) -> ScenarioResult:
     top_improvements = sorted_results[:5]
     top_declines = sorted_results[-5:][::-1]
 
-    delta_gdi = simulated_avg - baseline_avg
+    delta_gdi = simulated_avg_final - baseline_avg
     delta_pct = (delta_gdi / baseline_avg * 100) if baseline_avg > 0 else 0
 
     return ScenarioResult(
         scenario_name=scenario.name,
         baseline_gdi=round(baseline_avg, 2),
         baseline_health=round(baseline_avg, 2),
-        simulated_gdi=round(simulated_avg, 2),
-        simulated_health=round(simulated_avg, 2),
+        simulated_gdi=round(simulated_avg_final, 2),
+        simulated_health=round(simulated_avg_final, 2),
         delta_gdi=round(delta_gdi, 2),
         delta_percent=round(delta_pct, 2),
         wkp_affected=len(results),
@@ -357,6 +464,10 @@ def apply_scenario(scenario: Scenario) -> ScenarioResult:
         top_improvements=top_improvements,
         top_declines=top_declines,
         by_type=by_type,
+        network_enabled=scenario.enable_network,
+        network_effect=round(network_effect, 4),
+        n_network_affected=n_network_affected,
+        network_top_affected=network_top_affected or [],
     )
 
 

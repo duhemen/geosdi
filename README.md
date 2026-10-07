@@ -646,21 +646,63 @@ Buka **`https://geosdi.osvpn.id/api/docs`** untuk Swagger UI dengan **"Try it ou
 - Bulk CSV upload
 - Trend analysis
 
-### 🚧 FASE 5 — FULL DIGITAL TWIN (Estimasi: 4-6 minggu)
+### ✅ FASE 5 — NETWORK DYNAMICS (Selesai: 7 Okt 2026)
 
-- [ ] Network dynamics (WKP interaction)
-- [ ] Agent-Based Modeling (stakeholder simulation)
-- [ ] Real-time simulation
-- [ ] Multi-scenario analysis
-- [ ] Early warning system
+**Backend Network Engine:**
+- Adjacency matrix (61 nodes, 130 edges)
+- Centrality (Degree, Betweenness, Closeness, PageRank, Eigenvector)
+- Influence propagation (spillover effect)
+- Community detection (Louvain, modularity 0.74, 12 komunitas)
 
-### ⏸️ FASE 6 — NETWORK DYNAMICS (Estimasi: 6-12 bulan)
+**Frontend:**
+- Halaman `/network` dengan vis.js interaktif
+- Color modes (Type/Community/GDI)
+- Export PNG/GraphML/JSON
+- Time-lapse animation (24 bulan history)
+- Network Insight section di Digital Twin
+- Network-Aware Scenario (toggle + spillover)
 
-- [ ] Full digital twin
-- [ ] Autonomous decision support
-- [ ] Multi-country data
-- [ ] Advanced ML (PINN, GNN)
-- [ ] National-level optimization
+**API Endpoints:**
+- `/api/network/*` (8 endpoints)
+
+### ✅ FASE 6 — AGENT-BASED MODELING (Selesai: 7 Okt 2026)
+
+**ABM Engine:**
+- 7 agen stakeholder: Investor, Government, Community, Operator, Media, NGO, Academic
+- Base classes: Agent, Environment, Simulation
+- Multi-agent simulation (15 steps, emergent behavior)
+
+**Frontend:**
+- Halaman `/abm` — configure + run simulation
+- 3 preset scenarios (Balanced, Growth, Equity)
+- Live results (GDI evolution, agent activity)
+
+**API Endpoints:**
+- `/api/abm/*` (3 endpoints)
+
+### ✅ FASE 7 — REAL-TIME DATA INTEGRATION (Selesai: 7 Okt 2026)
+
+**Backend:**
+- Event store (real-time events)
+- Manual event entry (weather, tariff, news, policy, social)
+- Data source config (admin input their own API keys)
+- Encryption (Fernet) untuk credentials
+- Audit log (compliance-grade)
+
+**Frontend:**
+- `/admin/events` — list + create + import CSV
+- `/admin/data-sources` — configure API sources
+- `/admin/data-sources/audit-log` — credential access audit
+
+**API Endpoints:**
+- `/api/events/*` (5 endpoints)
+
+**Database:**
+- Tabel `events` (event store)
+- Tabel `data_sources` (source registry)
+- Tabel `data_source_credentials` (encrypted credentials)
+- Tabel `credential_access_log` (audit trail)
+- Tabel `event_subscriptions` (future)
 
 ---
 
@@ -941,15 +983,21 @@ GeoSDI menggunakan data dari **sumber publik resmi**:
 | **Total Data Points** | **432** |
 | **Total Kapasitas** | 2,385 MW |
 | **Provinsi** | 17 provinsi |
-| **API Endpoints** | 20+ |
-| **Database Tables** | 12 tabel + 3 views |
+| **API Endpoints** | **30+** |
+| **Database Tables** | **18** tabel + 3 views |
 | **Users** | Multi-user (admin/analyst/viewer) |
+| **Network Nodes** | 61 (130 edges) |
+| **Network Communities** | 12 (modularity 0.74) |
+| **ABM Agents** | 7 tipe |
+| **Data Sources** | 5 (configurable) |
+| **Events** | Real-time entry |
 | **Dokumentasi** | 9 file + 4 legal |
 
 **GDI Nasional:** 79.3 (weighted: 87.85)  
 **Health Score:** 64.81 — "Baik"  
 **Top GDI:** PLTP Wayang Windu (89.1 — Optimal)  
-**Top Kapasitas:** PLTP Salak (377 MW)
+**Top Kapasitas:** PLTP Salak (377 MW)  
+**Network Effect:** +10.7 GDI (intervensi Salak +5 GDI)
 
 ---
 

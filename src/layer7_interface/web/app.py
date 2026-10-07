@@ -25,12 +25,14 @@ from src.shared.config import get_settings
 from src.shared.database import get_cursor
 from src.shared.auth import get_current_user, require_admin, get_optional_user
 from src.layer7_interface.api.routes import (
-    nodes, spatial, gdi, simulate, insights, digital_twin, admin,
+    nodes, spatial, gdi, simulate, insights, digital_twin, admin, network, abm, events,
 )
 from src.layer7_interface.api.routes import auth as auth_api
 from src.layer7_interface.web import auth_routes
 from src.layer7_interface.web import admin_user_routes
 
+from src.layer7_interface.web import admin_data_source_routes
+from src.layer7_interface.web import admin_event_routes
 
 WEB_DIR = Path(__file__).resolve().parent
 settings = get_settings()
@@ -76,13 +78,17 @@ app.include_router(insights.router, prefix="/api")
 app.include_router(digital_twin.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
 app.include_router(auth_api.router, prefix="/api")  # Auth API
-
+app.include_router(network.router, prefix="/api")
+app.include_router(abm.router, prefix="/api")
+app.include_router(events.router, prefix="/api")
 # Web auth routes (login form, logout, profile)
 app.include_router(auth_routes.router)
 
 # Admin user management
 app.include_router(admin_user_routes.router)
 
+app.include_router(admin_data_source_routes.router)
+app.include_router(admin_event_routes.router)
 
 # ============================================================
 # Helper
@@ -250,6 +256,23 @@ async def digital_twin_page(request: Request):
         context={"active": "digital-twin"},
     )
 
+@app.get("/network", response_class=HTMLResponse)
+async def network_page(request: Request):
+    """Halaman Network Dynamics — visualisasi keterhubungan WKP."""
+    return templates.TemplateResponse(
+        request=request,
+        name="network.html",
+        context={"active": "network"},
+    )
+
+@app.get("/abm", response_class=HTMLResponse)
+async def abm_page(request: Request):
+    """Halaman Agent-Based Modeling."""
+    return templates.TemplateResponse(
+        request=request,
+        name="abm.html",
+        context={"active": "abm"},
+    )
 
 # ============================================================
 # API Health Check

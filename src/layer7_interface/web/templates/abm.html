@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+
+{% block title %}ABM Simulation — GeoSDI Geothermal{% endblock %}
+
+{% block content %}
+<style>
+    .abm-header {
+        background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+        color: white;
+        padding: 2.5rem 2rem;
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 10px 30px rgba(124, 58, 237, 0.2);
+    }
+    .abm-header h1 { margin: 0 0 0.5rem; font-size: 2rem; color: white; }
+    .abm-header p { margin: 0; opacity: 0.95; font-size: 1rem; line-height: 1.6; }
+
+    .abm-grid {
+        display: grid;
+        grid-template-columns: 380px 1fr;
+        gap: 1.5rem;
+    }
+    @media (max-width: 1024px) {
+        .abm-grid { grid-template-columns: 1fr; }
+    }
+
+    .config-panel {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        padding: 1.25rem;
+        position: sticky;
+        top: 1rem;
+        max-height: calc(100vh - 2rem);
+        overflow-y: auto;
+    }
+    .config-panel h3 {
+        margin: 0 0 1rem;
+        color: #7c3aed;
+        font-size: 1.05rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #f3e8ff;
+    }
+
+    .agent-item {
+        padding: 0.75rem;
+        background: #f8fafc;
+        border-radius: 8px;
+        margin-bottom: 0.6rem;
+        border-left: 3px solid #a855f7;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.88rem;
+    }
+    .agent-item .info {
+        flex: 1;
+    }
+    .agent-item .name {
+        font-weight: 600;
+        color: #1e3a8a;
+    }
+    .agent-item .type {
+        font-size: 0.72rem;
+        color: #64748b;
+        text-transform: uppercase;
+    }
+    .agent-item .remove-btn {
+        background: #fee2e2;
+        color: #991b1b;
+        border: none;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    .agent-item .remove-btn:hover { background: #fecaca; }
+
+    .agent-palette {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+    .agent-chip {
+        padding: 0.6rem 0.5rem;
+        background: linear-gradient(135deg, #f3e8ff, #e9d5ff);
+        border: 1px solid #a855f7;
+        border-radius: 6px;
+        cursor: pointer;
+        text-align: center;
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: #6b21a8;
+        transition: all 0.15s;
+    }
+    .agent-chip:hover {
+        background: linear-gradient(135deg, #e9d5ff, #d8b4fe);
+        transform: translateY(-2px);
+    }
+
+    .run-btn {
+        width: 100%;
+        padding: 0.75rem;
+        background: linear-gradient(135deg, #7c3aed, #a855f7);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 0.95rem;
+        cursor: pointer;
+        margin-top: 1rem;
+        transition: all 0.15s;
+    }
+    .run-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3); }
+    .run-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .main-panel {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        padding: 1.5rem;
+        min-height: 600px;
+    }
+
+    .preset-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+    }
+    .preset-card {
+        padding: 1rem;
+        background: linear-gradient(135deg, #f3e8ff, #ede9fe);
+        border: 2px solid #a855f7;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+    .preset-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(124, 58, 237, 0.2);
+    }
+    .preset-card h4 { margin: 0 0 0.35rem; color: #6b21a8; font-size: 0.92rem; }
+    .preset-card p { margin: 0; color: #7c3aed; font-size: 0.78rem; }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+    }
+    .stat-box {
+        padding: 1rem;
+        background: #f8fafc;
+        border-radius: 8px;
+        border-left: 4px solid #7c3aed;
+    }
+    .stat-box .label { font-size: 0.75rem; color: #64748b; font-weight: 600; text-transform: uppercase; }
+    .stat-box .value { font-size: 1.6rem; font-weight: 800; color: #1e3a8a; margin-top: 0.25rem; }
+    .stat-box .delta { font-size: 0.8rem; color: #10b981; font-weight: 600; margin-top: 0.15rem; }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #94a3b8;
+    }
+    .empty-state .icon { font-size: 3rem; margin-bottom: 0.75rem; }
+    .empty-state .title { font-size: 1.1rem; color: #64748b; font-weight: 600; margin-bottom: 0.35rem; }
+</style>
+
+<!-- Header -->
+<div class="abm-header">
+    <h1>🤖 Agent-Based Modeling</h1>
+    <p>Simulasi perilaku stakeholder geothermal. Investor cari ROI, pemerintah alokasi subsidi, masyarakat terima/tolak, NGO advokasi — semua berinteraksi, pola emergent muncul.</p>
+</div>
+
+<!-- Main Grid -->
+<div class="abm-grid">
+
+    <!-- Config Panel -->
+    <div class="config-panel">
+        <h3>⚙️ Konfigurasi Agen</h3>
+
+        <div style="font-size: 0.82rem; color: #64748b; margin-bottom: 0.75rem;">
+            Klik agen di bawah untuk tambah. Klik × untuk hapus.
+        </div>
+
+        <div id="agent-list">
+            <div style="text-align: center; color: #94a3b8; font-size: 0.85rem; padding: 1rem;">
+                Belum ada agen. Tambah dari palette ↓
+            </div>
+        </div>
+
+        <h3 style="margin-top: 1.25rem;">➕ Palette Agen</h3>
+        <div class="agent-palette" id="agent-palette">
+            <!-- Populated by JS -->
+        </div>
+
+        <h3 style="margin-top: 1.25rem;">🎛️ Parameter Simulasi</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.5rem;">
+            <div>
+                <label style="font-size: 0.78rem; color: #64748b; font-weight: 600;">Max Steps</label>
+                <input type="number" id="max-steps" value="15" min="5" max="50"
+                       style="width: 100%; padding: 0.4rem; border: 1px solid #cbd5e1; border-radius: 6px; margin-top: 0.25rem;">
+            </div>
+            <div>
+                <label style="font-size: 0.78rem; color: #64748b; font-weight: 600;">Random Seed</label>
+                <input type="number" id="seed" value="42"
+                       style="width: 100%; padding: 0.4rem; border: 1px solid #cbd5e1; border-radius: 6px; margin-top: 0.25rem;">
+            </div>
+        </div>
+
+        <button class="run-btn" id="run-btn" onclick="runSimulation()">
+            ▶️ Jalankan Simulation
+        </button>
+
+        <button onclick="clearAgents()" style="width: 100%; padding: 0.5rem; background: white; color: #64748b; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer; margin-top: 0.5rem; font-size: 0.85rem;">
+            🗑️ Clear Agents
+        </button>
+    </div>
+
+    <!-- Main Panel -->
+    <div class="main-panel">
+
+        <!-- Preset Scenarios -->
+        <h3 style="color: #7c3aed; margin: 0 0 0.75rem;">🎯 Preset Scenarios</h3>
+        <div class="preset-grid" id="preset-grid">
+            <div style="color: #94a3b8;">Loading presets...</div>
+        </div>
+
+        <!-- Results -->
+        <div id="results-area">
+            <div class="empty-state">
+                <div class="icon">🤖</div>
+                <div class="title">Belum ada hasil simulasi</div>
+                <div>Pilih preset scenario di atas, atau configure agen manual lalu klik "Jalankan Simulation".</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/abm.js?v=1.0.0"></script>
+{% endblock %}

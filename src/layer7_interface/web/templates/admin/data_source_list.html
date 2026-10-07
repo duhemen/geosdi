@@ -1,0 +1,188 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Data Sources — GeoSDI Admin{% endblock %}
+
+{% block admin_content %}
+<div style="padding: 0 0.5rem;">
+
+    <div class="page-header">
+        <div>
+            <h2><i class="bi bi-plug-fill me-2"></i>Data Sources</h2>
+            <p class="subtitle">Konfigurasi API eksternal untuk real-time data</p>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+            <a href="/admin/data-sources/audit-log" class="btn btn-outline">
+                <i class="bi bi-shield-check"></i>
+                <span>Audit Log</span>
+            </a>
+            <a href="/admin/data-sources/new" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i>
+                <span>Tambah Source</span>
+            </a>
+        </div>
+    </div>
+
+    {% if success %}
+    <div class="alert alert-success">
+        <i class="bi bi-check-circle-fill"></i>
+        <span>{{ success }}</span>
+    </div>
+    {% endif %}
+    {% if error %}
+    <div class="alert alert-error">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <span>{{ error }}</span>
+    </div>
+    {% endif %}
+
+    <!-- Info banner -->
+    <div style="background: linear-gradient(135deg, #eff6ff, #dbeafe); border: 2px solid #3b82f6; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+        <div style="display: flex; gap: 0.75rem; align-items: flex-start;">
+            <i class="bi bi-info-circle-fill" style="color: #3b82f6; font-size: 1.2rem;"></i>
+            <div style="font-size: 0.88rem; color: #1e40af; line-height: 1.6;">
+                <strong>Kredensial Anda, tanggung jawab Anda.</strong> GeoSDI tidak menyimpan API key dalam bentuk plaintext.
+                Semua kredensial di-encrypt sebelum disimpan. Anda perlu input sendiri API key dari BMKG/BI/PLN/dsb.
+            </div>
+        </div>
+    </div>
+
+    <!-- Sources Grid -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem;">
+        {% for s in sources %}
+        <div class="card" style="padding: 1.25rem; border-left: 4px solid {% if s.is_active %}#10b981{% else %}#94a3b8{% endif %};">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.75rem;">
+                <div>
+                    <div style="font-weight: 700; color: #1e3a8a; font-size: 1rem; margin-bottom: 0.25rem;">
+                        {% set icons = {'api': '🔌', 'rss': '📡', 'sensor': '📊', 'manual': '✍️'} %}
+                        {{ icons.get(s.tipe, '🔌') }} {{ s.nama }}
+                    </div>
+                    <code style="font-size: 0.75rem; background: #f1f5f9; padding: 0.15rem 0.4rem; border-radius: 4px; color: #64748b;">
+                        {{ s.kode }}
+                    </code>
+                </div>
+                {% if s.is_active %}
+                <span class="badge badge-active">Active</span>
+                {% else %}
+                <span class="badge badge-inactive">Inactive</span>
+                {% endif %}
+            </div>
+
+            <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 0.75rem;">
+                <div><strong>Type:</strong> {{ s.tipe }}</div>
+                {% if s.endpoint_url %}
+                <div style="margin-top: 0.25rem;"><strong>URL:</strong> <span style="font-family: monospace; font-size: 0.75rem;">{{ s.endpoint_url[:60] }}{% if s.endpoint_url|length > 60 %}...{% endif %}</span></div>
+                {% endif %}
+                {% if s.poll_interval %}
+                <div style="margin-top: 0.25rem;"><strong>Interval:</strong> {{ s.poll_interval }}s ({{ (s.poll_interval // 60) }} min)</div>
+                {% endif %}
+                {% if s.credential_hint %}
+                <div style="margin-top: 0.25rem;"><strong>Credentials:</strong> <code>{{ s.credential_hint }}</code></div>
+                {% else %}
+                <div style="margin-top: 0.25rem; color: #f59e0b;"><strong>⚠️ Credentials:</strong> Belum ada</div>
+                {% endif %}
+            </div>
+
+            <!-- Status -->
+            <div style="font-size: 0.78rem; margin-bottom: 0.75rem;">
+                {% if s.last_status == 'success' %}
+                <span style="color: #10b981;">
+                    <i class="bi bi-check-circle-fill"></i> Success
+                    {% if s.last_response_ms %}· {{ s.last_response_ms }}ms{% endif %}
+                </span>
+                {% elif s.last_status == 'failed' %}
+                <span style="color: #ef4444;">
+                    <i class="bi bi-x-circle-fill"></i> Failed: {{ s.last_error[:50] if s.last_error else 'Unknown error' }}
+                </span>
+                {% else %}
+                <span style="color: #94a3b8;">
+                    <i class="bi bi-dash-circle"></i> Belum pernah di-test
+                </span>
+                {% endif %}
+            </div>
+
+            <!-- Actions -->
+            <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
+                <a href="/admin/data-sources/{{ s.kode }}/edit" class="btn btn-sm btn-primary">
+                    <i class="bi bi-gear"></i>
+                    <span>Configure</span>
+                </a>
+                <button class="btn btn-sm btn-warning" onclick="testConnection('{{ s.kode }}')">
+                    <i class="bi bi-lightning"></i>
+                    <span>Test</span>
+                </button>
+                {% if s.is_active %}
+                <form method="post" action="/admin/data-sources/{{ s.kode }}/delete" style="display: inline;"
+                      onsubmit="return confirm('Nonaktifkan data source ini?');">
+                    <button class="btn btn-sm btn-danger">
+                        <i class="bi bi-pause-circle"></i>
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+        <div class="card" style="grid-column: 1 / -1; padding: 2rem; text-align: center;">
+            <i class="bi bi-plug" style="font-size: 2.5rem; color: #cbd5e1;"></i>
+            <h4 style="color: #64748b; margin-top: 0.5rem;">Belum ada data sources</h4>
+            <p style="color: #94a3b8; font-size: 0.9rem;">Klik "+ Tambah Source" untuk menambahkan.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Test Result Modal -->
+<div id="testModal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5); z-index: 2000; align-items: center; justify-content: center; padding: 1rem;">
+    <div style="background: white; border-radius: 12px; max-width: 600px; width: 100%; padding: 1.5rem;">
+        <h3 style="margin: 0 0 1rem; color: #1e3a8a;">🔌 Test Connection</h3>
+        <div id="testResult"></div>
+        <div style="display: flex; justify-content: flex-end; margin-top: 1rem;">
+            <button onclick="closeTestModal()" class="btn btn-outline">Close</button>
+        </div>
+    </div>
+</div>
+
+<script>
+async function testConnection(kode) {
+    const modal = document.getElementById('testModal');
+    const result = document.getElementById('testResult');
+
+    modal.style.display = 'flex';
+    result.innerHTML = '<div style="text-align: center; padding: 1rem;"><div style="display: inline-block; width: 30px; height: 30px; border: 3px solid #e2e8f0; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite;"></div><div style="margin-top: 0.5rem; color: #64748b;">Testing...</div></div>';
+
+    try {
+        const resp = await fetch(`/admin/data-sources/${kode}/test`, { method: 'POST' });
+        const data = await resp.json();
+
+        if (data.ok) {
+            result.innerHTML = `
+                <div style="background: #ecfdf5; padding: 1rem; border-radius: 8px; border-left: 4px solid #10b981;">
+                    <div style="color: #065f46; font-weight: 700; margin-bottom: 0.5rem;">✅ Connection Successful!</div>
+                    <div style="font-size: 0.85rem; color: #065f46;">
+                        <div><strong>Response time:</strong> ${data.response_time_ms}ms</div>
+                        <div style="margin-top: 0.5rem;"><strong>Sample response:</strong></div>
+                        <pre style="background: white; padding: 0.75rem; border-radius: 6px; font-size: 0.75rem; overflow-x: auto; margin-top: 0.5rem;">${JSON.stringify(data.sample_response, null, 2)}</pre>
+                    </div>
+                </div>
+            `;
+        } else {
+            result.innerHTML = `
+                <div style="background: #fef2f2; padding: 1rem; border-radius: 8px; border-left: 4px solid #ef4444;">
+                    <div style="color: #991b1b; font-weight: 700; margin-bottom: 0.5rem;">❌ Connection Failed</div>
+                    <div style="font-size: 0.85rem; color: #991b1b;">${data.error || 'Unknown error'}</div>
+                </div>
+            `;
+        }
+    } catch (e) {
+        result.innerHTML = `<div style="color: #ef4444;">Error: ${e.message}</div>`;
+    }
+}
+
+function closeTestModal() {
+    document.getElementById('testModal').style.display = 'none';
+}
+</script>
+
+<style>
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+{% endblock %}

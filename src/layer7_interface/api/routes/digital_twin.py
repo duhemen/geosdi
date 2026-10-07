@@ -43,6 +43,10 @@ class ScenarioRequest(BaseModel):
     filter_status: str | None = None
     filter_type: str | None = None
 
+    # === NETWORK-AWARE (BARU) ===
+    enable_network: bool = False
+    network_decay: float = Field(0.30, ge=0.0, le=1.0)
+    network_max_hops: int = Field(2, ge=1, le=5)
 
 class BudgetRequest(BaseModel):
     total_budget_billion: float = Field(..., gt=0, description="Total budget dalam miliar rupiah")
@@ -133,24 +137,51 @@ async def list_presets():
 # GET /scenarios/preset/{name} — Run preset scenario
 # ============================================================
 @router.get("/scenarios/preset/{name}")
-async def run_preset_scenario(name: str):
-    """Jalankan preset scenario."""
+async def run_preset_scenario(
+    name: str,
+    enable_network: bool = Query(False, description="Aktifkan network propagation"),
+    network_decay: float = Query(0.30, ge=0.0, le=1.0),
+    network_max_hops: int = Query(2, ge=1, le=5),
+):
+    """Jalankan preset scenario dengan opsi network propagation."""
     try:
-        result = run_preset(name)
+        # Ambil preset dan override network settings
+        if name not in PRESET_SCENARIOS:
+            raise ValueError(f"Preset '{name}' tidak ditemukan")
+
+        base_scenario = PRESET_SCENARIOS[name]
+
+        # Copy scenario dengan network settings baru
+        scenario = Scenario(
+            name=base_scenario.name,
+            delta_r=base_scenario.delta_r,
+            delta_t=base_scenario.delta_t,
+            delta_e=base_scenario.delta_e,
+            delta_p=base_scenario.delta_p,
+            delta_s=base_scenario.delta_s,
+            delta_n=base_scenario.delta_n,
+            delta_c=base_scenario.delta_c,
+            delta_h=base_scenario.delta_h,
+            filter_provinsi=base_scenario.filter_provinsi,
+            filter_status=base_scenario.filter_status,
+            filter_type=base_scenario.filter_type,
+            enable_time_delay=base_scenario.enable_time_delay,
+            enable_sensitivity=base_scenario.enable_sensitivity,
+            enable_interactions=base_scenario.enable_interactions,
+            enable_type_awareness=base_scenario.enable_type_awareness,
+            time_delay_factor=base_scenario.time_delay_factor,
+            # Network
+            enable_network=enable_network,
+            network_decay=network_decay,
+            network_max_hops=network_max_hops,
+        )
+
+        result = apply_scenario(scenario)
         return {
             "scenario_name": result.scenario_name,
-            "baseline": {
-                "gdi": result.baseline_gdi,
-                "health": result.baseline_health,
-            },
-            "simulated": {
-                "gdi": result.simulated_gdi,
-                "health": result.simulated_health,
-            },
-            "delta": {
-                "gdi": result.delta_gdi,
-                "percent": result.delta_percent,
-            },
+            "baseline": {"gdi": result.baseline_gdi, "health": result.baseline_health},
+            "simulated": {"gdi": result.simulated_gdi, "health": result.simulated_health},
+            "delta": {"gdi": result.delta_gdi, "percent": result.delta_percent},
             "wkp_summary": {
                 "affected": result.wkp_affected,
                 "improved": result.wkp_improved,
@@ -160,19 +191,20 @@ async def run_preset_scenario(name: str):
             "by_type": getattr(result, "by_type", {}),
             "top_improvements": getattr(result, "top_improvements", []),
             "top_declines": getattr(result, "top_declines", []),
+            # === NETWORK-AWARE ===
+            "network": {
+                "enabled": getattr(result, "network_enabled", False),
+                "total_effect": getattr(result, "network_effect", 0.0),
+                "n_affected": getattr(result, "n_network_affected", 0),
+                "top_affected": getattr(result, "network_top_affected", []),
+            },
         }
     except ValueError as e:
-        # Filter tidak match / preset tidak ada → 400
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        # Catch-all untuk debug — log traceback
         import traceback
         traceback.print_exc()
-        raise HTTPException(
-            status_code=500,
-            detail=f"{type(e).__name__}: {str(e)}"
-        )
-
+        raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {str(e)}")
 
 # ============================================================
 # POST /scenarios/custom — Custom scenario
@@ -192,6 +224,10 @@ async def run_custom_scenario(request: ScenarioRequest):
         delta_h=request.delta_h,
         filter_provinsi=request.filter_provinsi,
         filter_status=request.filter_status,
+        # === NETWORK-AWARE (BARU) ===
+        enable_network=request.enable_network,
+        network_decay=request.network_decay,
+        network_max_hops=request.network_max_hops,
     )
 
     try:
@@ -219,6 +255,13 @@ async def run_custom_scenario(request: ScenarioRequest):
             "by_type": getattr(result, "by_type", {}),
             "top_improvements": getattr(result, "top_improvements", []),
             "top_declines": getattr(result, "top_declines", []),
+            # === NETWORK-AWARE (BARU) ===
+            "network": {
+                "enabled": getattr(result, "network_enabled", False),
+                "total_effect": getattr(result, "network_effect", 0.0),
+                "n_affected": getattr(result, "n_network_affected", 0),
+                "top_affected": getattr(result, "network_top_affected", []),
+            },
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -229,7 +272,6 @@ async def run_custom_scenario(request: ScenarioRequest):
             status_code=500,
             detail=f"{type(e).__name__}: {str(e)}"
         )
-
 
 # ============================================================
 # GET /priority — Priority ranking
@@ -349,3 +391,67 @@ async def budget_optimize(request: BudgetRequest):
 async def executive_summary():
     """Executive summary untuk decision maker."""
     return generate_executive_summary()
+
+
+
+# ============================================================
+# GET /network-insight — Network insight untuk Digital Twin
+# ============================================================
+@router.get("/network-insight")
+async def network_insight(limit: int = Query(5, ge=1, le=20)):
+    """
+    Network insight untuk integrasi Digital Twin:
+    - Top N WKP paling sentral (PageRank)
+    - Communities overview
+    - Network leverage metric
+    """
+    from src.layer6_synthesis.network import (
+        get_top_central_wkps,
+        get_network_stats,
+        get_cluster_summary,
+        propagate_influence,
+    )
+
+    # 1. Top central WKP
+    top_central = get_top_central_wkps(metric="pagerank", limit=limit)
+
+    # 2. Network stats
+    stats = get_network_stats()
+
+    # 3. Communities
+    try:
+        communities = get_cluster_summary(algorithm="louvain")
+    except Exception as e:
+        log.warning(f"Community detection failed: {e}")
+        communities = {"n_communities": 0, "modularity": 0, "communities": []}
+
+    # 4. Network leverage: contoh intervensi di top 1 WKP
+    leverage = None
+    if top_central:
+        top_kode = top_central[0]["kode"]
+        try:
+            prop = propagate_influence(top_kode, delta_gdi=5.0, decay=0.3, max_hops=2)
+            leverage = {
+                "source_kode": prop.source_kode,
+                "source_nama": prop.source_name,
+                "delta_direct": prop.delta_gdi,
+                "network_effect": prop.total_network_effect,
+                "grand_total": round(prop.delta_gdi + prop.total_network_effect, 3),
+                "ratio": round(
+                    (prop.delta_gdi + prop.total_network_effect) / prop.delta_gdi, 2
+                ) if prop.delta_gdi > 0 else 0,
+                "n_affected": prop.n_affected,
+            }
+        except Exception as e:
+            log.warning(f"Leverage calculation failed: {e}")
+
+    return {
+        "top_central": top_central,
+        "stats": stats,
+        "communities": {
+            "n_communities": communities.get("n_communities", 0),
+            "modularity": communities.get("modularity", 0),
+            "top_communities": communities.get("communities", [])[:5],
+        },
+        "leverage": leverage,
+    }

@@ -1,0 +1,199 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Event Management — GeoSDI Admin{% endblock %}
+
+{% block admin_content %}
+<div style="padding: 0 0.5rem;">
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <div>
+            <h2><i class="bi bi-calendar-event me-2"></i>Event Management</h2>
+            <p class="subtitle">Kelola events real-time dari berbagai sumber</p>
+        </div>
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <a href="/admin/events/new" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i>
+                <span>Tambah Event</span>
+            </a>
+            <a href="/admin/events/import" class="btn btn-outline">
+                <i class="bi bi-upload"></i>
+                <span>Import CSV</span>
+            </a>
+            <form method="post" action="/admin/events/demo" style="display: inline;"
+                  onsubmit="return confirm('Buat 5 demo events?');">
+                <button class="btn btn-outline" type="submit" title="Buat 5 demo events untuk testing">
+                    <i class="bi bi-magic"></i>
+                    <span>Demo</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Alerts -->
+    {% if success %}
+    <div class="alert alert-success">
+        <i class="bi bi-check-circle-fill"></i>
+        <span>{{ success }}</span>
+    </div>
+    {% endif %}
+    {% if error %}
+    <div class="alert alert-error">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <span>{{ error }}</span>
+    </div>
+    {% endif %}
+
+    <!-- Stats Row -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem; margin-bottom: 1rem;">
+        <div class="card" style="padding: 1rem; border-left: 4px solid #3b82f6;">
+            <div style="font-size: 0.75rem; color: #64748b; text-transform: uppercase; font-weight: 600;">Total Events</div>
+            <div style="font-size: 1.75rem; font-weight: 800; color: #1e3a8a;">{{ stats.total }}</div>
+        </div>
+        <div class="card" style="padding: 1rem; border-left: 4px solid #10b981;">
+            <div style="font-size: 0.75rem; color: #64748b; text-transform: uppercase; font-weight: 600;">Last 24h</div>
+            <div style="font-size: 1.75rem; font-weight: 800; color: #10b981;">{{ stats.last_24h }}</div>
+        </div>
+        <div class="card" style="padding: 1rem; border-left: 4px solid #f59e0b;">
+            <div style="font-size: 0.75rem; color: #64748b; text-transform: uppercase; font-weight: 600;">Warning</div>
+            <div style="font-size: 1.75rem; font-weight: 800; color: #f59e0b;">{{ stats.by_severity.get('warning', 0) }}</div>
+        </div>
+        <div class="card" style="padding: 1rem; border-left: 4px solid #ef4444;">
+            <div style="font-size: 0.75rem; color: #64748b; text-transform: uppercase; font-weight: 600;">Critical</div>
+            <div style="font-size: 1.75rem; font-weight: 800; color: #ef4444;">{{ stats.by_severity.get('critical', 0) }}</div>
+        </div>
+        <div class="card" style="padding: 1rem; border-left: 4px solid #8b5cf6;">
+            <div style="font-size: 0.75rem; color: #64748b; text-transform: uppercase; font-weight: 600;">Unprocessed</div>
+            <div style="font-size: 1.75rem; font-weight: 800; color: #8b5cf6;">{{ stats.unprocessed }}</div>
+        </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <form method="get" class="filter-bar">
+        <div class="form-group">
+            <label class="form-label">Event Type</label>
+            <select name="event_type" class="form-select">
+                <option value="">— Semua —</option>
+                {% for t in event_types %}
+                <option value="{{ t }}" {% if filter_type == t %}selected{% endif %}>{{ t|capitalize }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Severity</label>
+            <select name="severity" class="form-select">
+                <option value="">— Semua —</option>
+                {% for s in severities %}
+                <option value="{{ s }}" {% if filter_severity == s %}selected{% endif %}>{{ s|capitalize }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Limit</label>
+            <input type="number" name="limit" class="form-control" value="{{ request.query_params.get('limit', 100) }}" min="10" max="500">
+        </div>
+        <div class="filter-bar-actions">
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-search"></i>
+                <span>Filter</span>
+            </button>
+            <a href="/admin/events" class="btn btn-outline" title="Reset filter">
+                <i class="bi bi-arrow-clockwise"></i>
+            </a>
+        </div>
+    </form>
+
+    <!-- Events Table -->
+    <div class="table-card">
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th style="width: 80px;">Severity</th>
+                        <th style="width: 120px;">Type</th>
+                        <th style="width: 100px;">Entity</th>
+                        <th>Title</th>
+                        <th style="width: 180px;">Timestamp</th>
+                        <th style="width: 80px; text-align: right;">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for e in events %}
+                    <tr>
+                        <td>
+                            {% if e.severity == 'critical' %}
+                            <span class="badge" style="background: #fee2e2; color: #991b1b;">
+                                <i class="bi bi-exclamation-octagon-fill"></i>Critical
+                            </span>
+                            {% elif e.severity == 'warning' %}
+                            <span class="badge" style="background: #fef3c7; color: #92400e;">
+                                <i class="bi bi-exclamation-triangle-fill"></i>Warning
+                            </span>
+                            {% else %}
+                            <span class="badge" style="background: #dbeafe; color: #1e40af;">
+                                <i class="bi bi-info-circle-fill"></i>Info
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% set icons = {
+                                'weather': '🌧️', 'tariff': '💱', 'news': '📰',
+                                'policy': '📜', 'social': '👥', 'sensor': '📡',
+                                'market': '📈', 'regulatory': '⚖️', 'other': '📌'
+                            } %}
+                            <span>{{ icons.get(e.event_type, '📌') }} {{ e.event_type }}</span>
+                        </td>
+                        <td>
+                            {% if e.entity_key %}
+                            <code style="font-size: 0.78rem; background: #f1f5f9; padding: 0.15rem 0.4rem; border-radius: 4px;">
+                                {{ e.entity_key }}
+                            </code>
+                            {% else %}
+                            <span style="color: #94a3b8; font-size: 0.8rem;">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div style="font-weight: 600; color: #0f172a; font-size: 0.88rem;">
+                                {{ e.title }}
+                            </div>
+                            {% if e.description %}
+                            <div style="font-size: 0.78rem; color: #64748b; margin-top: 0.15rem;">
+                                {{ e.description[:100] }}{% if e.description|length > 100 %}...{% endif %}
+                            </div>
+                            {% endif %}
+                        </td>
+                        <td style="font-size: 0.8rem; color: #64748b;">
+                            <i class="bi bi-clock-history me-1"></i>
+                            {{ e.event_timestamp.strftime('%d %b %Y %H:%M') if e.event_timestamp else '—' }}
+                        </td>
+                        <td style="text-align: right;">
+                            <form method="post" action="/admin/events/{{ e.id }}/delete"
+                                  style="display: inline;"
+                                  onsubmit="return confirm('Hapus event ini?');">
+                                <button class="btn btn-sm btn-danger" title="Delete">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <i class="bi bi-inbox"></i>
+                                <h4>Belum ada events</h4>
+                                <p>Klik "+ Tambah Event" untuk buat manual, atau "Demo" untuk isi contoh.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="table-footer">
+            <i class="bi bi-info-circle"></i>
+            Menampilkan <strong>{{ events|length }}</strong> events
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -292,3 +292,98 @@ window.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', optimizeBudget);
     }
 });
+
+
+
+// ============================================================
+// NETWORK INSIGHT — Integrasi Network ke Digital Twin
+// ============================================================
+async function loadNetworkInsight() {
+    const container = document.getElementById("networkInsight");
+    if (!container) return;
+
+    try {
+        const resp = await fetch("/api/digital-twin/network-insight?limit=5");
+        const data = await resp.json();
+
+        // Top Central WKP
+        const topCentral = data.top_central || [];
+        const centralHtml = topCentral.map((w, i) => `
+            <div style="display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem; background: white; border-radius: 6px; margin-bottom: 0.4rem; border-left: 3px solid #3b82f6;">
+                <div style="width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6, #1e40af); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; flex-shrink: 0;">#${i + 1}</div>
+                <div style="flex: 1; min-width: 0;">
+                    <div style="font-weight: 600; color: #1e3a8a; font-size: 0.85rem;">${w.kode} — ${w.nama}</div>
+                    <div style="font-size: 0.75rem; color: #64748b;">${w.provinsi} · GDI ${w.gdi_mean}</div>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-size: 0.7rem; color: #64748b;">PageRank</div>
+                    <div style="font-weight: 700; color: #10b981; font-size: 0.85rem;">${w.pagerank.toFixed(4)}</div>
+                </div>
+            </div>
+        `).join("");
+
+        // Communities
+        const communities = (data.communities.top_communities || []).map(c => `
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.4rem 0.6rem; background: white; border-radius: 6px; margin-bottom: 0.3rem; font-size: 0.82rem;">
+                <div>
+                    <strong style="color: #1e3a8a;">${c.dominant_provinsi}</strong>
+                    <div style="font-size: 0.72rem; color: #64748b;">${c.size} WKP · ${c.dominant_type}</div>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-weight: 700; color: #f59e0b; font-size: 0.82rem;">${c.total_kapasitas_mw.toFixed(0)} MW</div>
+                    <div style="font-size: 0.7rem; color: #64748b;">GDI ${c.avg_gdi}</div>
+                </div>
+            </div>
+        `).join("");
+
+        // Leverage
+        const lev = data.leverage;
+        const leverageHtml = lev ? `
+            <div style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 0.75rem; border-radius: 8px;">
+                <div style="font-size: 0.75rem; opacity: 0.9;">Network Leverage</div>
+                <div style="font-size: 1.6rem; font-weight: 800; margin: 0.25rem 0;">${lev.ratio}×</div>
+                <div style="font-size: 0.75rem; opacity: 0.95;">
+                    Intervensi ${lev.source_kode} +5 GDI
+                </div>
+                <div style="font-size: 0.75rem; opacity: 0.95; margin-top: 0.2rem;">
+                    → +${lev.grand_total} GDI total ke ${lev.n_affected} WKP
+                </div>
+            </div>
+        ` : '<div style="color: #94a3b8; font-size: 0.85rem;">Tidak ada data leverage</div>';
+
+        // Render
+        container.innerHTML = `
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                <div>
+                    <h4 style="margin: 0 0 0.6rem; color: #1e3a8a; font-size: 0.9rem;">🏆 Top ${topCentral.length} Central WKP</h4>
+                    ${centralHtml}
+                </div>
+                <div>
+                    <h4 style="margin: 0 0 0.6rem; color: #1e3a8a; font-size: 0.9rem;">🌐 Communities (${data.communities.n_communities})</h4>
+                    ${communities}
+                </div>
+                <div>
+                    <h4 style="margin: 0 0 0.6rem; color: #1e3a8a; font-size: 0.9rem;">⚡ Network Leverage</h4>
+                    ${leverageHtml}
+                </div>
+            </div>
+
+            <!-- Link ke halaman Network -->
+            <div style="margin-top: 1rem; text-align: center;">
+                <a href="/network" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: #3b82f6; color: white; text-decoration: none; border-radius: 6px; font-size: 0.85rem; font-weight: 600;">
+                    🕸️ Lihat Network Graph Interaktif →
+                </a>
+            </div>
+        `;
+
+        console.log("✅ Network insight loaded");
+    } catch (e) {
+        console.error("❌ Failed to load network insight:", e);
+        container.innerHTML = '<div style="color: #dc2626;">Gagal memuat network insight.</div>';
+    }
+}
+
+// Auto-load saat halaman dimuat
+if (document.getElementById("networkInsight")) {
+    loadNetworkInsight();
+}

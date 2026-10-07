@@ -1,0 +1,76 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Import Events — GeoSDI Admin{% endblock %}
+
+{% block admin_content %}
+<div style="max-width: 700px; padding: 0 0.5rem;">
+
+    <a href="/admin/events" class="back-link">
+        <i class="bi bi-arrow-left"></i>
+        <span>Kembali ke daftar events</span>
+    </a>
+
+    <div class="page-header" style="margin-bottom: 1rem;">
+        <div>
+            <h2><i class="bi bi-upload me-2"></i>Import Events dari CSV</h2>
+            <p class="subtitle">Upload file CSV untuk import events massal</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+
+            <div class="section-label">
+                <i class="bi bi-download me-1"></i>Step 1: Download Template
+            </div>
+
+            <p style="color: #64748b; font-size: 0.9rem;">
+                Download template CSV di bawah, isi dengan data events Anda, lalu upload kembali.
+            </p>
+
+            <a href="/admin/events/template.csv" class="btn btn-outline" style="margin-bottom: 1.5rem;">
+                <i class="bi bi-download"></i>
+                <span>Download Template CSV</span>
+            </a>
+
+            <div class="section-label">
+                <i class="bi bi-upload me-1"></i>Step 2: Upload File
+            </div>
+
+            <form method="post" action="/admin/events/import" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label class="form-label">File CSV <span class="required">*</span></label>
+                    <input type="file" name="file" class="form-control" accept=".csv" required
+                           style="padding: 0.5rem;">
+                    <div class="form-hint">
+                        <i class="bi bi-info-circle"></i>
+                        Format kolom: event_type, title, severity, entity_type, entity_key, event_timestamp, description, payload
+                    </div>
+                </div>
+
+                <div style="background: #f8fafc; padding: 1rem; border-radius: 8px; margin-top: 1rem; font-size: 0.85rem; color: #64748b;">
+                    <strong>💡 Tips:</strong>
+                    <ul style="margin: 0.5rem 0 0; padding-left: 1.5rem; line-height: 1.8;">
+                        <li>Kolom <strong>event_type</strong> dan <strong>title</strong> wajib diisi</li>
+                        <li><strong>severity</strong>: info / warning / critical</li>
+                        <li><strong>event_timestamp</strong>: format ISO 8601 (contoh: 2026-10-07T14:30:00Z)</li>
+                        <li><strong>payload</strong>: JSON string (opsional)</li>
+                    </ul>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; margin-top: 1.5rem;">
+                    <a href="/admin/events" class="btn btn-outline">
+                        <i class="bi bi-x-lg"></i>
+                        <span>Batal</span>
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-upload"></i>
+                        <span>Import Events</span>
+                    </button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

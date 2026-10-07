@@ -1,0 +1,150 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}{{ 'Tambah' if mode == 'new' else 'Edit' }} Event — GeoSDI Admin{% endblock %}
+
+{% block admin_content %}
+<div style="max-width: 800px; padding: 0 0.5rem;">
+
+    <a href="/admin/events" class="back-link">
+        <i class="bi bi-arrow-left"></i>
+        <span>Kembali ke daftar events</span>
+    </a>
+
+    <div class="page-header" style="margin-bottom: 1rem;">
+        <div>
+            <h2>
+                {% if mode == 'new' %}
+                <i class="bi bi-calendar-plus me-2"></i>Tambah Event Baru
+                {% else %}
+                <i class="bi bi-pencil-square me-2"></i>Edit Event
+                {% endif %}
+            </h2>
+            <p class="subtitle">Input event manual untuk real-time tracking</p>
+        </div>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-error">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <span>{{ error }}</span>
+    </div>
+    {% endif %}
+
+    <div class="card" style="padding: 0; overflow: hidden;">
+        <form method="post" action="{% if mode == 'new' %}/admin/events{% else %}/admin/events/{{ event.id }}{% endif %}">
+
+            <div class="card-body">
+
+                <div class="section-label">
+                    <i class="bi bi-info-circle me-1"></i>Informasi Event
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Event Type <span class="required">*</span></label>
+                        <select name="event_type" class="form-select" required>
+                            {% for t in event_types %}
+                            <option value="{{ t }}" {% if event and event.event_type == t %}selected{% endif %}>
+                                {{ t|capitalize }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Severity <span class="required">*</span></label>
+                        <select name="severity" class="form-select" required>
+                            {% for s in severities %}
+                            <option value="{{ s }}" {% if event and event.severity == s or (not event and s == 'info') %}selected{% endif %}>
+                                {{ s|capitalize }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label class="form-label">Title <span class="required">*</span></label>
+                        <input type="text" name="title" class="form-control"
+                               value="{{ event.title if event else '' }}"
+                               required minlength="3" maxlength="500"
+                               placeholder="cth: Curah hujan tinggi di WKP Wayang Windu">
+                    </div>
+
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label class="form-label">Description</label>
+                        <textarea name="description" class="form-control" rows="3"
+                                  placeholder="Detail event...">{{ event.description if event else '' }}</textarea>
+                    </div>
+                </div>
+
+                <div class="section-label" style="margin-top: 1.5rem;">
+                    <i class="bi bi-diagram-3 me-1"></i>Entity & Source
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Entity Type</label>
+                        <select name="entity_type" class="form-select">
+                            <option value="">— None —</option>
+                            {% for et in entity_types %}
+                            <option value="{{ et }}" {% if event and event.entity_type == et %}selected{% endif %}>
+                                {{ et|capitalize }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Entity Key</label>
+                        <input type="text" name="entity_key" class="form-control"
+                               value="{{ event.entity_key if event and event.entity_key else '' }}"
+                               placeholder="cth: WKP005"
+                               maxlength="100">
+                        <div class="form-hint">
+                            <i class="bi bi-info-circle"></i>
+                            Isi kode WKP (contoh: WKP005) atau provinsi
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label class="form-label">Source</label>
+                        <select name="source_kode" class="form-select">
+                            <option value="manual_entry" selected>Manual Entry</option>
+                            <option value="bmkg_weather">BMKG Weather</option>
+                            <option value="bi_kurs">Bank Indonesia</option>
+                            <option value="pln_tariff">PLN Tariff</option>
+                            <option value="media_rss">Media RSS</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="section-label" style="margin-top: 1.5rem;">
+                    <i class="bi bi-code-slash me-1"></i>Payload (JSON)
+                </div>
+
+                <div class="form-group">
+                    <textarea name="payload_json" class="form-control" rows="4"
+                              placeholder='{"rainfall_mm": 120, "duration_hours": 8}'
+                              style="font-family: monospace; font-size: 0.85rem;">{{ event.payload if event and event.payload else '' }}</textarea>
+                    <div class="form-hint">
+                        <i class="bi bi-info-circle"></i>
+                        Optional — data tambahan dalam format JSON
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="form-actions">
+                <a href="/admin/events" class="btn btn-outline">
+                    <i class="bi bi-x-lg"></i>
+                    <span>Batal</span>
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-save-fill"></i>
+                    <span>{{ 'Simpan Event' if mode == 'new' else 'Update Event' }}</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
